@@ -1,6 +1,6 @@
 # Memos
 
-An iOS note-taking app. Memos are sticky notes on a board — text, checklists,
+An iOS note-taking app. Tiles are sticky notes on the home page — text, checklists,
 photos, drawings and audio, organised into colour-coded folders.
 
 ## Requirements
@@ -22,18 +22,18 @@ the work reaches them.
 |---|---|
 | `App/` | Entry point and root navigation |
 | `Design/` | Palette, theme, typography, spacing, icons. No app logic |
-| `Models/` | `Memo`, `Folder`, `Block` |
-| `Storage/` | `MemoStore` — the only code that touches persistence |
+| `Models/` | `Tile`, `Folder`, `Block` |
+| `Storage/` | `TileStore` — the only code that touches persistence |
 | `Components/` | Reusable views that take plain values, never model types |
-| `Features/` | One folder per screen area: Board, Editor, Folders, Search, Settings |
+| `Features/` | One folder per screen area: Home, Editor, Folders, Search, Settings |
 | `Resources/` | Fonts and asset catalogue |
 
 ### The rule that keeps it modular
 
 **Components must not know about the data model.** `StickyCard` takes a colour,
-an icon, a title and a subtitle — not a `Memo`. The card appears on the board,
+an icon, a title and a subtitle — not a `Tile`. The card appears on the home page,
 in search results, in the widget, in folder previews and in settings; if it took
-a `Memo`, every one of those would need to fabricate one just to render, and so
+a `Tile`, every one of those would need to fabricate one just to render, and so
 would every SwiftUI preview.
 
 Features own screens. Components own the pieces screens share. When a view is
@@ -54,7 +54,7 @@ Branches are named after the ticket: `m0-1/repo-setup`, `m1-3/masonry-layout`.
 | Milestone | Scope |
 |---|---|
 | M0 | Foundation — design system and `StickyCard` |
-| M1 | Board, running on sample data |
+| M1 | Home page, running on sample data |
 | M2 | Persistence with SwiftData |
 | M3 | Text editor and the formatting tray |
 | M4 | Media blocks — photo, camera, audio, drawing |
