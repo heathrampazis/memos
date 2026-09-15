@@ -1,10 +1,12 @@
 import Foundation
 import SwiftUI
+import SwiftData
 
 struct TileEditorView: View {
     @Bindable var tile: Tile
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
 
     @State private var controller = RichTextController()
     @State private var body_ = NSAttributedString()
@@ -50,6 +52,7 @@ struct TileEditorView: View {
         .onDisappear {
             saveTask?.cancel()
             commit()
+            discardIfBlank()
         }
     }
 
@@ -71,5 +74,20 @@ struct TileEditorView: View {
         tile.bodyData = RichText.archive(body_)
         tile.plainText = body_.string
         tile.touch()
+    }
+
+    /// A tile with no title and no text is not a tile — it goes back to being
+    /// a free slot. Deleting on the next pass lets the pop finish first, so
+    /// nothing is reading the model while it is being removed.
+    private func discardIfBlank() {
+        guard tile.isBlank else { return }
+        let context = context
+        let tile = tile
+
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                context.delete(tile)
+            }
+        }
     }
 }
