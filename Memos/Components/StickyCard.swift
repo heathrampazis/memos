@@ -4,7 +4,7 @@ import SwiftUI
 /// A sticky note. Takes plain values and a content slot — never a model type,
 /// so it can be used by the board, search, previews and the widget alike.
 struct StickyCard<Content: View>: View {
-    var color: Color = Theme.card
+    var color: TileColor = TilePalette.color(0)
     var tilt: Double = 0
     @ViewBuilder var content: Content
 
@@ -16,11 +16,15 @@ struct StickyCard<Content: View>: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(Spacing.cardPadding)
-            .background(shape.fill(color))
-            .overlay(shape.strokeBorder(Theme.cardEdge, lineWidth: 1))
+            .background(shape.fill(color.fill))
+            .overlay {
+                if let edge = color.edge {
+                    shape.strokeBorder(edge, lineWidth: 1)
+                }
+            }
             .background(
                 shape
-                    .fill(Theme.cardShadow)
+                    .fill(color.shadow)
                     .offset(y: Spacing.cardShadowOffset)
             )
             .rotationEffect(.degrees(tilt))
@@ -29,11 +33,14 @@ struct StickyCard<Content: View>: View {
 
 #Preview {
     HStack(spacing: Spacing.gridGap) {
-        StickyCard(tilt: -1) {
-            Text("Kitchen reno").font(Typography.tileTitle)
+        StickyCard(color: TilePalette.color(0), tilt: -1) {
+            Text("Paper").font(Typography.tileTitle)
         }
-        StickyCard(tilt: 0.8) {
-            Text("Toast for Tom").font(Typography.tileTitle)
+        StickyCard(color: TilePalette.color(1), tilt: 0.8) {
+            Text("Yellow").font(Typography.tileTitle)
+        }
+        StickyCard(color: TilePalette.color(5), tilt: -0.6) {
+            Text("Blue").font(Typography.tileTitle)
         }
     }
     .frame(height: 160)

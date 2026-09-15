@@ -7,7 +7,7 @@ struct TileView: View {
     let tile: Tile
 
     var body: some View {
-        StickyCard(tilt: tile.tilt) {
+        StickyCard(color: TilePalette.color(tile.colorIndex), tilt: tile.tilt) {
             if tile.isBlank {
                 blank
             } else {
@@ -21,7 +21,7 @@ struct TileView: View {
             Spacer()
             Image(systemName: "plus")
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(TileInk.faint)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -31,19 +31,19 @@ struct TileView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(tile.displayTitle)
                 .font(Typography.tileTitle)
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(TileInk.primary)
                 .lineLimit(2)
 
             Text(tile.plainText)
                 .font(Typography.tileBody)
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(TileInk.secondary)
                 .lineLimit(4)
 
             Spacer(minLength: 0)
 
             Text(tile.updatedAt.formatted(.relative(presentation: .numeric)))
                 .font(Typography.tileFooter)
-                .foregroundStyle(Theme.faint)
+                .foregroundStyle(TileInk.tertiary)
         }
     }
 }

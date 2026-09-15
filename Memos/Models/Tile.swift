@@ -16,6 +16,9 @@ final class Tile {
     /// search read this rather than unarchiving the body.
     var plainText: String
 
+    /// Index into TilePalette. 0 is plain paper.
+    var colorIndex: Int
+
     var createdAt: Date
     var updatedAt: Date
 
@@ -27,6 +30,7 @@ final class Tile {
         self.title = title
         self.bodyData = Data()
         self.plainText = ""
+        self.colorIndex = 0
         self.createdAt = .now
         self.updatedAt = .now
         self.tilt = Double.random(in: -1.1...1.1)

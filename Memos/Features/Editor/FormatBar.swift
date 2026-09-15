@@ -4,8 +4,12 @@ import SwiftUI
 /// The editing tray, docked to the bottom of the editor. It stays put whether
 /// or not the keyboard is up — mounting and unmounting it resizes the text
 /// view underneath, which reflows the note every time editing stops.
+///
+/// It takes the tile's colour so it reads as part of the note. Controls are
+/// drawn in ink, which every tile colour carries at well over 7:1.
 struct FormatBar: View {
     let controller: RichTextController
+    let color: TileColor
 
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -16,34 +20,32 @@ struct FormatBar: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 7) {
-                    ForEach(TextLevel.allCases, id: \.self) { level in
-                        levelPill(level)
-                    }
-                    Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                ForEach(TextLevel.allCases, id: \.self) { level in
+                    levelPill(level)
                 }
-
-                HStack(spacing: 4) {
-                    iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
-                    iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
-                    iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
-                    Spacer(minLength: 0)
-                    dismissButton
-                }
+                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
+
+            HStack(spacing: 4) {
+                iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
+                iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
+                iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
+                Spacer(minLength: 0)
+                dismissButton
+            }
         }
-        .padding(.bottom, 14)
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .padding(.bottom, 22)
         .background {
             shape
-                .fill(Theme.canvas)
-                .overlay(shape.stroke(Theme.border, lineWidth: 1))
+                .fill(color.tray)
+                .overlay(shape.stroke(Theme.ink.opacity(0.10), lineWidth: 1))
                 .padding(.bottom, -Spacing.trayBleed)
         }
+        .animation(.easeOut(duration: 0.2), value: color.id)
     }
 
     private var dismissButton: some View {
@@ -52,7 +54,7 @@ struct FormatBar: View {
         } label: {
             Image(systemName: "keyboard.chevron.compact.down")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.muted)
+                .foregroundStyle(Theme.ink.opacity(0.55))
                 .frame(width: 42, height: 40)
         }
         .buttonStyle(.plain)
@@ -68,10 +70,12 @@ struct FormatBar: View {
         } label: {
             Text(level.label)
                 .font(Typography.barLabel)
-                .foregroundStyle(active ? Theme.card : Theme.ink)
+                .foregroundStyle(active ? color.fill : Theme.ink)
                 .padding(.horizontal, 14)
                 .frame(height: 36)
-                .background(Capsule().fill(active ? Theme.ink : Theme.surface))
+                .background(
+                    Capsule().fill(active ? Theme.ink : Theme.ink.opacity(0.09))
+                )
         }
         .buttonStyle(.plain)
     }
@@ -80,7 +84,7 @@ struct FormatBar: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isOn ? Theme.card : Theme.ink)
+                .foregroundStyle(isOn ? color.fill : Theme.ink)
                 .frame(width: 42, height: 40)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)

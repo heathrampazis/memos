@@ -12,6 +12,7 @@ struct TileEditorView: View {
     @State private var body_ = NSAttributedString()
     @State private var saveTask: Task<Void, Never>?
     @FocusState private var titleFocused: Bool
+    @State private var isPickingColor = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,7 +33,7 @@ struct TileEditorView: View {
             RichTextView(text: $body_, controller: controller)
                 .padding(.horizontal, Spacing.screen)
         }
-        .background(Theme.card)
+        .background(tileColor.fill)
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -42,18 +43,31 @@ struct TileEditorView: View {
                     dismiss()
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                CircleIconButton(systemImage: "ellipsis") {
+                    isPickingColor = true
+                }
+            }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            FormatBar(controller: controller)
+            FormatBar(controller: controller, color: tileColor)
+        }
+        .sheet(isPresented: $isPickingColor) {
+            TileColorPicker(selection: $tile.colorIndex)
         }
         .onAppear(perform: load)
         .onChange(of: body_) { scheduleSave() }
         .onChange(of: tile.title) { scheduleSave() }
+        .onChange(of: tile.colorIndex) { tile.touch() }
         .onDisappear {
             saveTask?.cancel()
             commit()
             discardIfBlank()
         }
+    }
+
+    private var tileColor: TileColor {
+        TilePalette.color(tile.colorIndex)
     }
 
     private func load() {
