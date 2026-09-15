@@ -18,4 +18,11 @@ enum Spacing {
     /// inset gives the text view empty space to scroll into, which lets it
     /// push the caret to the top of the screen instead of keeping it low.
     static let editorTrailingSpace: CGFloat = 24
+
+    /// The editing tray's top corners.
+    static let trayRadius: CGFloat = 22
+
+    /// How far the tray's fill runs past the bottom of the screen, so its
+    /// square lower edge and border never come into view.
+    static let trayBleed: CGFloat = 90
 }

@@ -1,34 +1,63 @@
 import Foundation
 import SwiftUI
 
-/// The editing bar pinned above the keyboard. Everything the editor can do
-/// lives here, so there is only one place to look.
+/// The editing tray, docked to the bottom of the editor. It stays put whether
+/// or not the keyboard is up — mounting and unmounting it resizes the text
+/// view underneath, which reflows the note every time editing stops.
 struct FormatBar: View {
     let controller: RichTextController
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 7) {
-                ForEach(TextLevel.allCases, id: \.self) { level in
-                    levelPill(level)
-                }
-                Spacer(minLength: 0)
-            }
+    private var shape: UnevenRoundedRectangle {
+        UnevenRoundedRectangle(
+            topLeadingRadius: Spacing.trayRadius,
+            topTrailingRadius: Spacing.trayRadius,
+            style: .continuous
+        )
+    }
 
-            HStack(spacing: 4) {
-                iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
-                iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
-                iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
-                Spacer(minLength: 0)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 7) {
+                    ForEach(TextLevel.allCases, id: \.self) { level in
+                        levelPill(level)
+                    }
+                    Spacer(minLength: 0)
+                }
+
+                HStack(spacing: 4) {
+                    iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
+                    iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
+                    iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
+                    Spacer(minLength: 0)
+                    dismissButton
+                }
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(Theme.canvas)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Theme.border).frame(height: 1)
+        .padding(.bottom, 14)
+        .background {
+            shape
+                .fill(Theme.canvas)
+                .overlay(shape.stroke(Theme.border, lineWidth: 1))
+                .padding(.bottom, -Spacing.trayBleed)
         }
+    }
+
+    private var dismissButton: some View {
+        Button {
+            controller.endEditing()
+        } label: {
+            Image(systemName: "keyboard.chevron.compact.down")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.muted)
+                .frame(width: 42, height: 40)
+        }
+        .buttonStyle(.plain)
+        .opacity(controller.isEditing ? 1 : 0)
+        .allowsHitTesting(controller.isEditing)
     }
 
     private func levelPill(_ level: TextLevel) -> some View {

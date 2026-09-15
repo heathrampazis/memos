@@ -31,9 +31,7 @@ struct TileEditorView: View {
         .background(Theme.card)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if controller.isEditing {
-                FormatBar(controller: controller)
-            }
+            FormatBar(controller: controller)
         }
         .onAppear(perform: load)
         .onChange(of: body_) { scheduleSave() }

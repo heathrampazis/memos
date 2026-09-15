@@ -20,7 +20,7 @@ struct RichTextView: UIViewRepresentable {
         view.alwaysBounceVertical = true
         view.keyboardDismissMode = .interactive
         view.attributedText = text
-        view.typingAttributes = RichText.attributes(level: .body, traits: [], underlined: false)
+        view.typingAttributes = RichText.attributes(level: .body)
 
         controller.textView = view
         return view
@@ -66,9 +66,9 @@ struct RichTextView: UIViewRepresentable {
             replacementText replacement: String
         ) -> Bool {
             guard replacement == "\n" else { return true }
-            guard RichText.level(in: textView.typingAttributes) != .body else { return true }
+            guard parent.controller.level != .body else { return true }
 
-            let bodyAttributes = RichText.attributes(level: .body, traits: [], underlined: false)
+            let bodyAttributes = RichText.attributes(level: .body)
 
             let storage = textView.textStorage
             storage.beginEditing()
@@ -79,10 +79,16 @@ struct RichTextView: UIViewRepresentable {
             storage.endEditing()
 
             textView.selectedRange = NSRange(location: range.location + 1, length: 0)
-            textView.typingAttributes = bodyAttributes
-
             parent.text = textView.attributedText
-            parent.controller.syncState()
+
+            // Moving the caret makes UITextView rebuild typingAttributes from
+            // the surrounding text, which lands after this method returns and
+            // would overwrite anything set here. Assigning on the next pass is
+            // what makes the new line take body size and weight immediately.
+            DispatchQueue.main.async {
+                textView.typingAttributes = bodyAttributes
+                self.parent.controller.syncState()
+            }
             return false
         }
 
