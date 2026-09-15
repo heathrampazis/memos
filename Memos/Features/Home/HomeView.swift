@@ -6,8 +6,11 @@ struct HomeView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \Tile.createdAt) private var tiles: [Tile]
 
-    @State private var newTile: Tile?
-    @State private var isEditingNewTile = false
+    @State private var openTile: Tile?
+    @State private var isEditorOpen = false
+    @State private var isArranging = false
+    @State private var pendingDelete: Tile?
+    @State private var isConfirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -19,16 +22,27 @@ struct HomeView: View {
             .padding(.bottom, Spacing.homeBottomInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Theme.canvas)
-            .navigationDestination(isPresented: $isEditingNewTile) {
-                if let newTile {
-                    TileEditorView(tile: newTile)
+            .contentShape(Rectangle())
+            .onTapGesture { stopArranging() }
+            .navigationDestination(isPresented: $isEditorOpen) {
+                if let openTile {
+                    TileEditorView(tile: openTile)
                 }
             }
-            .onChange(of: isEditingNewTile) { _, presented in
-                // Let go of the reference once the editor is gone, so a tile
-                // discarded for being blank is not held on to here.
+            .onChange(of: isEditorOpen) { _, presented in
                 guard !presented else { return }
-                DispatchQueue.main.async { newTile = nil }
+                DispatchQueue.main.async { openTile = nil }
+            }
+            .confirmationDialog(
+                "Delete this tile?",
+                isPresented: $isConfirmingDelete,
+                titleVisibility: .visible,
+                presenting: pendingDelete
+            ) { tile in
+                Button("Delete", role: .destructive) { delete(tile) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("The tile and everything in it will be removed.")
             }
         }
     }
@@ -40,6 +54,13 @@ struct HomeView: View {
                 .kerning(-1)
                 .foregroundStyle(Theme.ink)
             Spacer()
+
+            if isArranging {
+                Button("Done") { stopArranging() }
+                    .font(Typography.barLabel)
+                    .foregroundStyle(Theme.ink)
+                    .transition(.opacity)
+            }
         }
         .padding(.bottom, 18)
     }
@@ -63,22 +84,36 @@ struct HomeView: View {
     @ViewBuilder
     private func view(for slot: Slot) -> some View {
         switch slot {
-        case .tile(let tile):
-            NavigationLink {
-                TileEditorView(tile: tile)
-            } label: {
-                TileView(tile: tile)
-            }
-            .buttonStyle(.plain)
-            .transition(.scale(scale: 0.8).combined(with: .opacity))
+        case .tile(let tile, let index):
+            BoardTile(
+                tile: tile,
+                index: index,
+                isEditing: isArranging,
+                onOpen: { open(tile) },
+                onHold: { startArranging() },
+                onDelete: { confirmDelete(tile) }
+            )
+            .transition(
+                .asymmetric(
+                    insertion: .scale(scale: 0.8).combined(with: .opacity),
+                    removal: .scale(scale: 0.2).combined(with: .opacity)
+                )
+            )
 
         case .free:
             FreeSlotView(action: addTile)
+                .disabled(isArranging)
+                .opacity(isArranging ? 0.45 : 1)
         }
     }
 
-    /// The slot becomes a tile and opens straight away, so tapping + puts you
-    /// in the note rather than on the board looking at it.
+    // MARK: Actions
+
+    private func open(_ tile: Tile) {
+        openTile = tile
+        isEditorOpen = true
+    }
+
     private func addTile() {
         guard tiles.count < Tile.boardCapacity else { return }
 
@@ -86,20 +121,40 @@ struct HomeView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.68)) {
             context.insert(tile)
         }
+        open(tile)
+    }
 
-        newTile = tile
-        isEditingNewTile = true
+    private func confirmDelete(_ tile: Tile) {
+        pendingDelete = tile
+        isConfirmingDelete = true
+    }
+
+    private func delete(_ tile: Tile) {
+        pendingDelete = nil
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+            context.delete(tile)
+        }
+        if tiles.count <= 1 { stopArranging() }
+    }
+
+    private func startArranging() {
+        withAnimation(.easeOut(duration: 0.2)) { isArranging = true }
+    }
+
+    private func stopArranging() {
+        guard isArranging else { return }
+        withAnimation(.easeOut(duration: 0.2)) { isArranging = false }
     }
 
     // MARK: Layout
 
     private enum Slot: Identifiable {
-        case tile(Tile)
+        case tile(Tile, Int)
         case free(Int)
 
         var id: AnyHashable {
             switch self {
-            case .tile(let tile): AnyHashable(tile.persistentModelID)
+            case .tile(let tile, _): AnyHashable(tile.persistentModelID)
             case .free(let index): AnyHashable("free-\(index)")
             }
         }
@@ -107,7 +162,7 @@ struct HomeView: View {
 
     /// Real tiles first, then empty places up to the board's capacity.
     private var slots: [Slot] {
-        var slots = tiles.prefix(Tile.boardCapacity).map(Slot.tile)
+        var slots = tiles.prefix(Tile.boardCapacity).enumerated().map { Slot.tile($1, $0) }
         for index in slots.count..<Tile.boardCapacity {
             slots.append(.free(index))
         }
