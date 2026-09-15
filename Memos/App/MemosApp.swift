@@ -3,10 +3,12 @@ import SwiftUI
 
 @main
 struct MemosApp: App {
+    private let container = ModelContainerFactory.make()
+
     var body: some Scene {
         WindowGroup {
             HomeView()
         }
-        .modelContainer(for: Tile.self)
+        .modelContainer(container)
     }
 }

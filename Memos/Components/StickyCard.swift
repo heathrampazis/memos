@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 /// A sticky note. Takes plain values and a content slot — never a model type,

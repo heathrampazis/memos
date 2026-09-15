@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 /// Maps a Tile onto StickyCard. The mapping lives here so the component
@@ -33,7 +34,7 @@ struct TileView: View {
                 .foregroundStyle(Theme.ink)
                 .lineLimit(2)
 
-            Text(tile.text)
+            Text(tile.plainText)
                 .font(Typography.tileBody)
                 .foregroundStyle(Theme.muted)
                 .lineLimit(4)
