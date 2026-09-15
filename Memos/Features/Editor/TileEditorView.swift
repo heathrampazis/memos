@@ -13,6 +13,7 @@ struct TileEditorView: View {
     @State private var saveTask: Task<Void, Never>?
     @FocusState private var titleFocused: Bool
     @State private var isPickingColor = false
+    @State private var isDeleting = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -53,7 +54,11 @@ struct TileEditorView: View {
             FormatBar(controller: controller, color: tileColor)
         }
         .sheet(isPresented: $isPickingColor) {
-            TileColorPicker(selection: $tile.colorIndex)
+            TileColorPicker(selection: $tile.colorIndex) {
+                isDeleting = true
+                isPickingColor = false
+                dismiss()
+            }
         }
         .onAppear(perform: load)
         .onChange(of: body_) { scheduleSave() }
@@ -61,6 +66,10 @@ struct TileEditorView: View {
         .onChange(of: tile.colorIndex) { tile.touch() }
         .onDisappear {
             saveTask?.cancel()
+            guard !isDeleting else {
+                remove()
+                return
+            }
             commit()
             discardIfBlank()
         }
@@ -88,6 +97,18 @@ struct TileEditorView: View {
         tile.bodyData = RichText.archive(body_)
         tile.plainText = body_.string
         tile.touch()
+    }
+
+    /// Deleted on the next pass, once the pop has finished — writing to or
+    /// reading a removed model mid-transition is a crash.
+    private func remove() {
+        let context = context
+        let tile = tile
+        DispatchQueue.main.async {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
+                context.delete(tile)
+            }
+        }
     }
 
     /// A tile with no title and no text is not a tile — it goes back to being
