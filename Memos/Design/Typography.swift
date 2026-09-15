@@ -10,6 +10,8 @@ enum Typography {
     static let tileBody = Font.system(size: 12, weight: .medium)
     static let tileFooter = Font.system(size: 10.5, weight: .semibold)
 
+    static let sheetCaption = Font.system(size: 13, weight: .semibold)
+    static let sheetTitle = Font.system(size: 20, weight: .heavy)
     static let barLabel = Font.system(size: 13, weight: .bold)
 
     static func block(_ level: TextLevel, bold: Bool) -> Font {
