@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct MemoEditorView: View {
-    @Bindable var memo: Memo
+struct TileEditorView: View {
+    @Bindable var tile: Tile
     @FocusState private var focus: Field?
 
     private enum Field { case title, text }
@@ -9,14 +9,14 @@ struct MemoEditorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                TextField("Title", text: $memo.title, axis: .vertical)
+                TextField("Title", text: $tile.title, axis: .vertical)
                     .font(Typography.editorTitle)
                     .foregroundStyle(Theme.ink)
                     .focused($focus, equals: .title)
                     .submitLabel(.next)
                     .onSubmit { focus = .text }
 
-                TextField("Start writing…", text: $memo.text, axis: .vertical)
+                TextField("Start writing…", text: $tile.text, axis: .vertical)
                     .font(Typography.editorBody)
                     .foregroundStyle(Theme.ink)
                     .lineSpacing(5)
@@ -27,7 +27,7 @@ struct MemoEditorView: View {
         }
         .background(Theme.card)
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: memo.title) { memo.touch() }
-        .onChange(of: memo.text) { memo.touch() }
+        .onChange(of: tile.title) { tile.touch() }
+        .onChange(of: tile.text) { tile.touch() }
     }
 }

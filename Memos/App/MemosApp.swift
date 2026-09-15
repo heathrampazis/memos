@@ -5,8 +5,8 @@ import SwiftUI
 struct MemosApp: App {
     var body: some Scene {
         WindowGroup {
-            BoardView()
+            HomeView()
         }
-        .modelContainer(for: Memo.self)
+        .modelContainer(for: Tile.self)
     }
 }

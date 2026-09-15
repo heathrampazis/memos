@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Maps a Memo onto StickyCard. The mapping lives here so the component
+/// Maps a Tile onto StickyCard. The mapping lives here so the component
 /// itself stays model-free.
-struct MemoTile: View {
-    let memo: Memo
+struct TileView: View {
+    let tile: Tile
 
     var body: some View {
-        StickyCard(tilt: memo.tilt) {
-            if memo.isBlank {
+        StickyCard(tilt: tile.tilt) {
+            if tile.isBlank {
                 blank
             } else {
                 filled
@@ -16,34 +16,31 @@ struct MemoTile: View {
     }
 
     private var blank: some View {
-        VStack(alignment: .leading) {
+        VStack {
             Spacer()
-            HStack {
-                Spacer()
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(Theme.faint)
-                Spacer()
-            }
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Theme.faint)
             Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var filled: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(memo.displayTitle)
+            Text(tile.displayTitle)
                 .font(Typography.tileTitle)
                 .foregroundStyle(Theme.ink)
                 .lineLimit(2)
 
-            Text(memo.text)
+            Text(tile.text)
                 .font(Typography.tileBody)
                 .foregroundStyle(Theme.muted)
                 .lineLimit(4)
 
             Spacer(minLength: 0)
 
-            Text(memo.updatedAt.formatted(.relative(presentation: .numeric)))
+            Text(tile.updatedAt.formatted(.relative(presentation: .numeric)))
                 .font(Typography.tileFooter)
                 .foregroundStyle(Theme.faint)
         }

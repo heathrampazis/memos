@@ -1,9 +1,9 @@
 import SwiftData
 import SwiftUI
 
-struct BoardView: View {
+struct HomeView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \Memo.createdAt) private var memos: [Memo]
+    @Query(sort: \Tile.createdAt) private var tiles: [Tile]
 
     private let columns = [
         GridItem(.flexible(), spacing: Spacing.gridGap),
@@ -14,11 +14,11 @@ struct BoardView: View {
         NavigationStack {
             ScrollView {
                 LazyVGrid(columns: columns, spacing: Spacing.gridGap) {
-                    ForEach(memos) { memo in
+                    ForEach(tiles) { tile in
                         NavigationLink {
-                            MemoEditorView(memo: memo)
+                            TileEditorView(tile: tile)
                         } label: {
-                            MemoTile(memo: memo)
+                            TileView(tile: tile)
                                 .frame(height: Spacing.tileHeight)
                         }
                         .buttonStyle(.plain)
@@ -48,14 +48,14 @@ struct BoardView: View {
 
     /// Eight blank tiles on first launch. Replaced by real creation in M2-4.
     private func seedIfNeeded() {
-        guard memos.isEmpty else { return }
+        guard tiles.isEmpty else { return }
         for _ in 0..<8 {
-            context.insert(Memo())
+            context.insert(Tile())
         }
     }
 }
 
 #Preview {
-    BoardView()
-        .modelContainer(for: Memo.self, inMemory: true)
+    HomeView()
+        .modelContainer(for: Tile.self, inMemory: true)
 }

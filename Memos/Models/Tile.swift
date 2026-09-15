@@ -2,13 +2,13 @@ import Foundation
 import SwiftData
 
 @Model
-final class Memo {
+final class Tile {
     var title: String
     var text: String
     var createdAt: Date
     var updatedAt: Date
 
-    /// Fixed at creation. Generating this during rendering makes cards
+    /// Fixed at creation. Generating this during rendering makes tiles
     /// re-tilt on every redraw.
     var tilt: Double
 
