@@ -3,6 +3,9 @@ import SwiftData
 
 @Model
 final class Tile {
+    /// The board is a fixed eight tiles.
+    static let boardCapacity = 8
+
     var title: String
 
     /// The note body as an archived attributed string. Attachments —
