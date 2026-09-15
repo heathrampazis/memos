@@ -11,6 +11,10 @@ enum Theme {
     static let cardEdge = Color(light: 0xEDE8DC, dark: 0x2B2620)
     static let cardShadow = Color(light: 0xE2DBCB, dark: 0x0C0B09)
 
+    /// An empty slot on the board: a soft area waiting to be filled.
+    static let slotFill = Color(light: 0xF7F1E4, dark: 0x1B1814)
+    static let slotOutline = Color(light: 0xC7B99D, dark: 0x4C453B)
+
     static let surface = Color(light: 0xE9E3D7, dark: 0x27231D)
     static let border = Color(light: 0xDED7C8, dark: 0x332E27)
 
