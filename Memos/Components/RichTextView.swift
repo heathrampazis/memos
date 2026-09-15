@@ -19,6 +19,10 @@ struct RichTextView: UIViewRepresentable {
         view.textContainer.lineFragmentPadding = 0
         view.alwaysBounceVertical = true
         view.keyboardDismissMode = .interactive
+        // The app is light-only for now. UIKit views resolve dynamic
+        // colours against their own traits, so this has to be said here too.
+        view.overrideUserInterfaceStyle = .light
+        view.keyboardAppearance = .light
         view.attributedText = text
         view.typingAttributes = RichText.attributes(level: .body)
 
