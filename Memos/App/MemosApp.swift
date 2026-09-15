@@ -1,17 +1,12 @@
-//
-//  MemosApp.swift
-//  Memos
-//
-//  Created by Heath Rampazis on 15/9/2026.
-//
-
+import SwiftData
 import SwiftUI
 
 @main
 struct MemosApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            BoardView()
         }
+        .modelContainer(for: Memo.self)
     }
 }
