@@ -8,7 +8,8 @@ enum Spacing {
     static let cardRadius: CGFloat = 20
     static let cardPadding: CGFloat = 15
     static let cardShadowOffset: CGFloat = 3
-    static let tileHeight: CGFloat = 168
+    /// Clearance between the last row of tiles and the home indicator.
+    static let homeBottomInset: CGFloat = 56
 
     /// List marker column. Nudge the gap if bullets sit off the text.
     static let listMarkerWidth: CGFloat = 20
@@ -20,6 +21,8 @@ enum Spacing {
     static let editorTrailingSpace: CGFloat = 24
 
     /// The editing tray's top corners.
+    static let circleButton: CGFloat = 44
+
     static let trayRadius: CGFloat = 22
 
     /// How far the tray's fill runs past the bottom of the screen, so its

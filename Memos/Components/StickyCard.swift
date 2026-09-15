@@ -36,7 +36,7 @@ struct StickyCard<Content: View>: View {
             Text("Toast for Tom").font(Typography.tileTitle)
         }
     }
-    .frame(height: Spacing.tileHeight)
+    .frame(height: 160)
     .padding(Spacing.screen)
     .background(Theme.canvas)
 }

@@ -4,6 +4,8 @@ import SwiftUI
 struct TileEditorView: View {
     @Bindable var tile: Tile
 
+    @Environment(\.dismiss) private var dismiss
+
     @State private var controller = RichTextController()
     @State private var body_ = NSAttributedString()
     @State private var saveTask: Task<Void, Never>?
@@ -29,7 +31,16 @@ struct TileEditorView: View {
                 .padding(.horizontal, Spacing.screen)
         }
         .background(Theme.card)
+        .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                CircleIconButton(systemImage: "chevron.left") {
+                    dismiss()
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             FormatBar(controller: controller)
         }
