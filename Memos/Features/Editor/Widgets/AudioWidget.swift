@@ -92,10 +92,17 @@ struct AudioWidget: View {
             } else {
                 // Named in place rather than through a sheet: one tap on the
                 // caption is the whole interaction.
-                TextField("Voice memo", text: $clip.name)
+                TextField("", text: $clip.name)
                     .textFieldStyle(.plain)
                     .foregroundStyle(color.inkSecondary)
                     .submitLabel(.done)
+                    .overlay(alignment: .leading) {
+                        if clip.name.isEmpty {
+                            Text("Voice memo")
+                                .foregroundStyle(color.inkTertiary)
+                                .allowsHitTesting(false)
+                        }
+                    }
             }
         }
         .font(Typography.barLabel)

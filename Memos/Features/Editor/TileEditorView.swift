@@ -31,7 +31,7 @@ struct TileEditorView: View {
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .overlay(alignment: .bottomTrailing) {
-            AddWidgetButton(color: tileColor, onAudio: addAudioWidget)
+            AddWidgetButton(color: tileColor, onAudio: addAudioWidget, onPanel: addPanel)
                 .padding(.trailing, Spacing.screen)
                 .padding(.bottom, 16)
         }
@@ -120,6 +120,11 @@ struct TileEditorView: View {
                     removeWidget(segment.id)
                 }
                 .padding(.vertical, 7)
+            } else if segment.panel != nil {
+                PanelWidget(panel: $segment.panel.required(), color: tileColor) {
+                    removeWidget(segment.id)
+                }
+                .padding(.vertical, 7)
             } else {
                 RichTextView(
                     segmentID: segment.id,
@@ -146,12 +151,22 @@ struct TileEditorView: View {
 
     // MARK: Widgets
 
+    private func addAudioWidget() {
+        // The caret moves below the card, ready to keep writing; recording is
+        // the card's own button, so nothing here starts it.
+        insert(NoteSegment(clip: AudioClip(id: UUID())), thenType: true)
+    }
+
+    private func addPanel(_ kind: PanelKind) {
+        // A panel is inserted empty and takes the caret itself, so the keyboard
+        // stays up and lands in the box that was just made.
+        insert(NoteSegment(panel: PanelBlock(id: UUID(), kind: kind)), thenType: false)
+    }
+
     /// The widget takes the caret's line as the place to break the note in two:
     /// the text above stays in one run, the text below starts another, and the
     /// widget sits between them. With nothing focused it goes on the end.
-    private func addAudioWidget() {
-        let widget = NoteSegment(clip: AudioClip(id: UUID()))
-
+    private func insert(_ widget: NoteSegment, thenType: Bool) {
         guard let textView = controller.textView,
               textView.isFirstResponder,
               let index = segments.firstIndex(where: { $0.id == controller.activeID }),
@@ -159,7 +174,7 @@ struct TileEditorView: View {
         else {
             segments.append(widget)
             normalise()
-            if let last = segments.last { controller.focus(last.id, at: 0) }
+            if thenType, let last = segments.last { controller.focus(last.id, at: 0) }
             return
         }
 
@@ -176,15 +191,15 @@ struct TileEditorView: View {
 
         segments[index].text = head
         segments.insert(contentsOf: [widget, following], at: index + 1)
-        controller.focus(following.id, at: 0)
+        if thenType { controller.focus(following.id, at: 0) }
     }
 
     private func removeWidget(_ id: UUID) {
         guard let index = segments.firstIndex(where: { $0.id == id }),
-              let clip = segments[index].clip
+              !segments[index].isText
         else { return }
 
-        AudioStore.delete(clip.id)
+        if let clip = segments[index].clip { AudioStore.delete(clip.id) }
         withAnimation(.easeOut(duration: 0.2)) {
             segments.remove(at: index)
         }
@@ -195,15 +210,19 @@ struct TileEditorView: View {
         normalise()
     }
 
-    /// Backspace at the very start of a run. The widget above is taken the way
-    /// a character would be; otherwise the two runs simply become one again.
+    /// Backspace at the very start of a run. An empty widget above is taken the
+    /// way a character would be; otherwise the two runs become one again.
     private func mergeBack(_ id: UUID) -> Bool {
         guard let index = segments.firstIndex(where: { $0.id == id }), index > 0 else {
             return false
         }
 
-        if let clip = segments[index - 1].clip {
-            AudioStore.delete(clip.id)
+        let previous = segments[index - 1]
+        if !previous.isText {
+            // Only an untouched widget goes to a single backspace. A recording
+            // or a written panel is deleted on purpose, from its own menu.
+            guard previous.isEmptyWidget else { return true }
+            if let clip = previous.clip { AudioStore.delete(clip.id) }
             segments.remove(at: index - 1)
         }
 

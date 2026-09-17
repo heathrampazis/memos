@@ -2,24 +2,26 @@ import Foundation
 import SwiftUI
 
 /// Adds a widget to a tile. Pressing it opens a small cluster rather than doing
-/// anything itself — voice is the only widget so far, and drawings and panels
-/// join the same column when they arrive.
+/// anything itself, so drawings and the rest join the same column when they
+/// arrive without the button growing a mode.
 struct AddWidgetButton: View {
     let color: TileColor
     var onAudio: () -> Void
+    var onPanel: (PanelKind) -> Void
 
     @State private var isOpen = false
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 12) {
             if isOpen {
+                panelMenu
+                    .transition(reveal)
+
                 option("mic.fill", label: "Voice memo") {
                     close()
                     onAudio()
                 }
-                .transition(
-                    .scale(scale: 0.4, anchor: .bottom).combined(with: .opacity)
-                )
+                .transition(reveal)
             }
 
             Button {
@@ -34,6 +36,32 @@ struct AddWidgetButton: View {
             .buttonStyle(WidgetButtonStyle(color: color, diameter: Spacing.addWidgetButton))
             .accessibilityLabel(isOpen ? "Close widgets" : "Add widget")
         }
+    }
+
+    private var reveal: AnyTransition {
+        .scale(scale: 0.4, anchor: .bottom).combined(with: .opacity)
+    }
+
+    /// The kind is what a panel is, so it is chosen on the way in rather than
+    /// dropping an untyped box into the note and making the user fix it.
+    private var panelMenu: some View {
+        Menu {
+            ForEach(PanelKind.allCases) { kind in
+                Button {
+                    close()
+                    onPanel(kind)
+                } label: {
+                    Label(kind.label, systemImage: kind.symbol)
+                }
+            }
+        } label: {
+            Image(systemName: "text.bubble.fill")
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(color.fill)
+                .frame(width: Spacing.widgetOptionButton, height: Spacing.widgetOptionButton)
+                .background(Circle().fill(color.ink))
+        }
+        .accessibilityLabel("Panel")
     }
 
     private func option(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
