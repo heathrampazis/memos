@@ -2,32 +2,36 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// One UITextView for the whole note. One first responder, so the keyboard
-/// never flickers, held keys keep repeating, and scrolling to the caret is
-/// UIKit's job rather than ours.
+/// One run of text in a note. It does not scroll — the page does — so it sizes
+/// itself to its content and the widgets above and below it sit in the same
+/// scroll as ordinary lines.
 struct RichTextView: UIViewRepresentable {
+    let segmentID: UUID
     @Binding var text: NSAttributedString
     let controller: RichTextController
 
-    func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
-        view.delegate = context.coordinator
+    /// Backspace at the very start. Returns true when the editor handled it.
+    var onBackspaceAtStart: () -> Bool
+
+    func makeUIView(context: Context) -> EditorTextView {
+        let view = EditorTextView()
+        let coordinator = context.coordinator
+
+        view.delegate = coordinator
         view.backgroundColor = .clear
-        view.textContainerInset = UIEdgeInsets(
-            top: 4, left: 0, bottom: Spacing.editorTrailingSpace, right: 0
-        )
+        view.isScrollEnabled = false
+        view.textContainerInset = .zero
         view.textContainer.lineFragmentPadding = 0
-        view.alwaysBounceVertical = true
-        view.showsVerticalScrollIndicator = false
         view.keyboardDismissMode = .interactive
         view.attributedText = text
         view.typingAttributes = RichText.attributes(level: .body, ink: controller.inkColor)
-
-        controller.textView = view
+        view.onDeleteBackwardAtStart = { [weak coordinator] in
+            coordinator?.parent.onBackspaceAtStart() ?? false
+        }
         return view
     }
 
-    func updateUIView(_ view: UITextView, context: Context) {
+    func updateUIView(_ view: EditorTextView, context: Context) {
         context.coordinator.parent = self
 
         // Only push down when the text genuinely differs, otherwise every
@@ -35,8 +39,31 @@ struct RichTextView: UIViewRepresentable {
         if view.attributedText != text {
             let selection = view.selectedRange
             view.attributedText = text
-            view.selectedRange = selection
+            view.selectedRange = NSRange(
+                location: min(selection.location, view.attributedText.length),
+                length: 0
+            )
         }
+
+        guard controller.focusRequest?.segmentID == segmentID else { return }
+        // Claiming the responder mid-update fights the layout pass that put the
+        // run here in the first place, so it waits for the next one.
+        DispatchQueue.main.async {
+            guard let request = controller.focusRequest, request.segmentID == segmentID else { return }
+            controller.focusRequest = nil
+            view.becomeFirstResponder()
+            view.selectedRange = NSRange(
+                location: min(request.location, view.attributedText.length),
+                length: 0
+            )
+            view.revealCaret()
+        }
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: EditorTextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: max(fitted.height, Spacing.minimumTextRun))
     }
 
     func makeCoordinator() -> Coordinator {
@@ -53,6 +80,7 @@ struct RichTextView: UIViewRepresentable {
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.attributedText
             parent.controller.syncState()
+            (textView as? EditorTextView)?.revealCaret()
         }
 
         /// A new line after a title or heading carries on as body text.
@@ -98,11 +126,20 @@ struct RichTextView: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
-            parent.controller.syncState()
+            parent.controller.activate(textView, segmentID: parent.segmentID)
+            // The keyboard's inset lands a beat after this, so the caret is
+            // only worth chasing once it has.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+                (textView as? EditorTextView)?.revealCaret()
+            }
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
-            parent.controller.syncState()
+            // Moving between runs ends one and begins the next, so this waits to
+            // see whether another run picked the caret up.
+            DispatchQueue.main.async {
+                self.parent.controller.deactivate(textView)
+            }
         }
     }
 }

@@ -111,16 +111,34 @@ enum RichText {
         return copy
     }
 
-    /// Archive and restore. Attachments — drawings, audio, images — travel
-    /// inside the same archive once they arrive.
+    /// Archive and restore one run of text. Widgets are their own segments in
+    /// NoteCodec, so nothing but text ever reaches this.
     static func archive(_ text: NSAttributedString) -> Data {
         (try? NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)) ?? Data()
     }
 
     static func restore(_ data: Data) -> NSAttributedString {
-        guard !data.isEmpty,
-              let text = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSAttributedString.self, from: data)
-        else { return NSAttributedString() }
-        return text
+        guard !data.isEmpty else { return NSAttributedString() }
+
+        let allowed: [AnyClass] = [
+            NSAttributedString.self,
+            NSParagraphStyle.self, NSMutableParagraphStyle.self,
+            UIFont.self, UIColor.self, NSNumber.self, NSString.self,
+        ]
+        if let text = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: allowed, from: data)
+            as? NSAttributedString {
+            return text
+        }
+
+        // A secure decode fails whole if any nested class is missing from the
+        // list above. Losing a note to that would be worse than reading back an
+        // archive this app wrote itself, so fall back rather than return empty.
+        guard let reader = try? NSKeyedUnarchiver(forReadingFrom: data) else {
+            return NSAttributedString()
+        }
+        reader.requiresSecureCoding = false
+        defer { reader.finishDecoding() }
+        return reader.decodeObject(forKey: NSKeyedArchiveRootObjectKey) as? NSAttributedString
+            ?? NSAttributedString()
     }
 }
