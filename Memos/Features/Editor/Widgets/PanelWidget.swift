@@ -7,7 +7,6 @@ import SwiftUI
 struct PanelWidget: View {
     @Binding var panel: PanelBlock
     let color: TileColor
-    var onDelete: () -> Void
 
     @FocusState private var focused: Bool
 
@@ -45,11 +44,6 @@ struct PanelWidget: View {
                 .fill(color.ink.opacity(0.10))
         )
         .animation(.easeOut(duration: 0.18), value: panel.kind)
-        .contextMenu {
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
         // A panel is inserted empty, so the caret belongs in it straight away.
         .onAppear {
             guard panel.text.isEmpty else { return }
