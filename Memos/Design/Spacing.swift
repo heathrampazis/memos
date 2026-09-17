@@ -20,9 +20,18 @@ enum Spacing {
     /// push the caret to the top of the screen instead of keeping it low.
     static let editorTrailingSpace: CGFloat = 24
 
+    /// A run of text between two widgets can be empty and still has to be
+    /// tappable, so it never collapses below one line.
+    static let minimumTextRun: CGFloat = 26
+
     /// The editing tray's top corners.
     static let circleButton: CGFloat = 44
     static let addWidgetButton: CGFloat = 54
+    static let widgetOptionButton: CGFloat = 46
+
+    /// Empty room under the last run, tappable so the caret goes to the end of
+    /// the note the way it does in Notes.
+    static let editorTailTap: CGFloat = 130
 
     static let trayRadius: CGFloat = 22
 

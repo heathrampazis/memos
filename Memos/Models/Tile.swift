@@ -8,8 +8,8 @@ final class Tile {
 
     var title: String
 
-    /// The note body as an archived attributed string. Attachments —
-    /// drawings, audio, images — will ride along inside the same archive.
+    /// The note body: an ordered list of text runs and widgets, encoded by
+    /// NoteCodec. Older tiles hold a bare archived string and still decode.
     var bodyData: Data
 
     /// Plain-text mirror, kept in step on save. Tile previews and, later,

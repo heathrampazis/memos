@@ -18,6 +18,19 @@ final class RichTextController {
     private(set) var isUnderlined = false
     private(set) var isEditing = false
 
+    /// Which run of the note holds the caret. The note is several text views
+    /// now, so "the text view" is whichever one is being typed in.
+    private(set) var activeID: UUID?
+
+    /// Asks a particular run to take the caret. Set by the editor after it
+    /// splits or joins runs; the run itself clears it once it has obeyed.
+    var focusRequest: FocusRequest?
+
+    struct FocusRequest: Equatable {
+        let segmentID: UUID
+        let location: Int
+    }
+
     /// While we are rewriting attributes ourselves, the caret moves and UIKit
     /// reports changes we would otherwise read back and undo.
     private var isStyling = false
@@ -58,6 +71,24 @@ final class RichTextController {
             return text.attributes(at: 0, effectiveRange: nil)
         }
         return textView.typingAttributes
+    }
+
+    func activate(_ textView: UITextView, segmentID: UUID) {
+        self.textView = textView
+        activeID = segmentID
+        syncState()
+    }
+
+    /// Ignored unless this really is the run that was active — otherwise moving
+    /// the caret from one run to the next would read as editing having stopped,
+    /// and the format bar would blink.
+    func deactivate(_ textView: UITextView) {
+        guard self.textView === textView else { return }
+        isEditing = false
+    }
+
+    func focus(_ segmentID: UUID, at location: Int) {
+        focusRequest = FocusRequest(segmentID: segmentID, location: location)
     }
 
     func endEditing() {
