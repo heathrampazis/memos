@@ -8,11 +8,11 @@ struct NoteSegment: Identifiable, Equatable {
     let id: UUID
     var text: NSAttributedString
     var clip: AudioClip?
+    var panel: PanelBlock?
 
     init(id: UUID = UUID(), text: NSAttributedString = NSAttributedString()) {
         self.id = id
         self.text = text
-        self.clip = nil
     }
 
     init(id: UUID = UUID(), clip: AudioClip) {
@@ -21,7 +21,30 @@ struct NoteSegment: Identifiable, Equatable {
         self.clip = clip
     }
 
-    var isText: Bool { clip == nil }
+    init(id: UUID = UUID(), panel: PanelBlock) {
+        self.id = id
+        self.text = NSAttributedString()
+        self.panel = panel
+    }
+
+    var isText: Bool { clip == nil && panel == nil }
+
+    /// A widget nothing has been put into yet. Backspace may take one of these;
+    /// anything with a recording or writing in it has to be deleted on purpose.
+    var isEmptyWidget: Bool {
+        if let clip = clip { return clip.isEmpty }
+        if let panel = panel { return panel.text.isEmpty }
+        return false
+    }
+}
+
+/// A callout: an icon, a kind and a line or two of plain text. The kind is the
+/// whole of its meaning, so it is picked on insert and changed from the panel's
+/// own header rather than buried in a menu somewhere else.
+struct PanelBlock: Equatable, Codable {
+    var id: UUID
+    var kind: PanelKind = .info
+    var text: String = ""
 }
 
 /// A recording, minus the audio itself. The samples are the meter readings
@@ -44,14 +67,18 @@ enum NoteCodec {
     private struct Entry: Codable {
         var text: Data?
         var clip: AudioClip?
+        var panel: PanelBlock?
     }
 
     static func encode(_ segments: [NoteSegment]) -> Data {
         let entries = segments.map { segment in
             if let clip = segment.clip {
-                return Entry(text: nil, clip: clip)
+                return Entry(text: nil, clip: clip, panel: nil)
             }
-            return Entry(text: RichText.archive(segment.text), clip: nil)
+            if let panel = segment.panel {
+                return Entry(text: nil, clip: nil, panel: panel)
+            }
+            return Entry(text: RichText.archive(segment.text), clip: nil, panel: nil)
         }
         return (try? JSONEncoder().encode(entries)) ?? Data()
     }
@@ -65,6 +92,7 @@ enum NoteCodec {
 
         let segments = entries.map { entry -> NoteSegment in
             if let clip = entry.clip { return NoteSegment(clip: clip) }
+            if let panel = entry.panel { return NoteSegment(panel: panel) }
             return NoteSegment(text: RichText.restore(entry.text ?? Data()))
         }
         return segments.isEmpty ? [NoteSegment()] : segments
@@ -76,7 +104,12 @@ enum NoteCodec {
     static func plainText(_ segments: [NoteSegment]) -> String {
         segments
             .compactMap { segment -> String? in
-                if let clip = segment.clip { return "\u{266A} " + clip.displayName }
+                if let clip = segment.clip {
+                    return clip.isEmpty ? nil : "\u{266A} " + clip.displayName
+                }
+                if let panel = segment.panel {
+                    return panel.text.isEmpty ? nil : panel.text
+                }
                 let text = segment.text.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 return text.isEmpty ? nil : text
             }
