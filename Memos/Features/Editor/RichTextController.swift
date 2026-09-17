@@ -12,11 +12,16 @@ final class RichTextController {
     /// Text colour for the tile this editor is showing.
     var inkColor: UIColor = UIColor(Theme.ink)
 
+    /// The tile's own colour, used for whatever is drawn on top of ink — the
+    /// tick inside a filled checkbox.
+    var fillColor: UIColor = .white
+
     private(set) var level: TextLevel = .body
     private(set) var isBold = false
     private(set) var isItalic = false
     private(set) var isUnderlined = false
     private(set) var isEditing = false
+    private(set) var list: TextListKind?
 
     /// Which run of the note holds the caret. The note is several text views
     /// now, so "the text view" is whichever one is being typed in.
@@ -46,12 +51,21 @@ final class RichTextController {
         isBold = RichText.isBold(in: attributes)
         isItalic = RichText.isItalic(in: attributes)
         isUnderlined = RichText.isUnderlined(in: attributes)
+        // A list belongs to the whole paragraph, so it is read from the start of
+        // one rather than from the character behind the caret.
+        list = RichText.list(in: paragraphAttributes(in: textView))
 
         // Put the full set back. UIKit rebuilds typingAttributes from nearby
         // text whenever the caret moves and does not carry custom keys across,
         // so without this the level is lost the moment you move.
         textView.typingAttributes = RichText.attributes(
-            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined, ink: inkColor
+            level: level,
+            bold: isBold,
+            italic: isItalic,
+            underlined: isUnderlined,
+            list: list,
+            checked: RichText.isChecked(in: attributes),
+            ink: inkColor
         )
     }
 
@@ -71,6 +85,17 @@ final class RichTextController {
             return text.attributes(at: 0, effectiveRange: nil)
         }
         return textView.typingAttributes
+    }
+
+    /// The attributes of the caret's paragraph. An empty paragraph carries no
+    /// characters to hold them, so what the caret is about to type stands in.
+    private func paragraphAttributes(in textView: UITextView) -> [NSAttributedString.Key: Any] {
+        let text = textView.attributedText ?? NSAttributedString()
+        let paragraph = (text.string as NSString).paragraphRange(for: textView.selectedRange)
+        guard paragraph.length > 0, paragraph.location < text.length else {
+            return textView.typingAttributes
+        }
+        return text.attributes(at: paragraph.location, effectiveRange: nil)
     }
 
     func activate(_ textView: UITextView, segmentID: UUID) {
@@ -105,6 +130,10 @@ final class RichTextController {
             let text = NSMutableAttributedString(attributedString: textView.attributedText)
             let paragraph = (text.string as NSString).paragraphRange(for: textView.selectedRange)
 
+            // Titles and headings are not list items, so choosing one ends the
+            // list the caret was in.
+            let keptList = newLevel == .body ? list : nil
+
             if paragraph.length > 0 {
                 text.enumerateAttributes(in: paragraph, options: []) { attributes, range, _ in
                     text.setAttributes(
@@ -112,7 +141,10 @@ final class RichTextController {
                             level: newLevel,
                             bold: RichText.isBold(in: attributes),
                             italic: RichText.isItalic(in: attributes),
-                            underlined: RichText.isUnderlined(in: attributes)
+                            underlined: RichText.isUnderlined(in: attributes),
+                            list: keptList,
+                            checked: RichText.isChecked(in: attributes),
+                            ink: inkColor
                         ),
                         range: range
                     )
@@ -120,6 +152,82 @@ final class RichTextController {
                 replace(textView, with: text)
             }
             level = newLevel
+            list = keptList
+        }
+    }
+
+    /// Lists apply to whole paragraphs. Tapping the kind a paragraph already is
+    /// turns it back into plain text, so each button is its own switch.
+    func toggle(list kind: TextListKind) {
+        let newList: TextListKind? = list == kind ? nil : kind
+
+        style { textView in
+            let text = NSMutableAttributedString(attributedString: textView.attributedText)
+            let string = text.string as NSString
+            let span = string.paragraphRange(for: textView.selectedRange)
+
+            var index = span.location
+            while index < NSMaxRange(span) {
+                let paragraph = string.paragraphRange(for: NSRange(location: index, length: 0))
+                setList(newList, on: paragraph, in: text)
+                if paragraph.length == 0 { break }
+                index = NSMaxRange(paragraph)
+            }
+
+            if text.length > 0 { replace(textView, with: text) }
+            list = newList
+            level = .body
+        }
+    }
+
+    /// Takes the caret's paragraph out of its list, leaving the text alone.
+    func clearList() {
+        style { textView in
+            let text = NSMutableAttributedString(attributedString: textView.attributedText)
+            let paragraph = (text.string as NSString).paragraphRange(for: textView.selectedRange)
+            setList(nil, on: paragraph, in: text)
+            if text.length > 0 { replace(textView, with: text) }
+            list = nil
+            level = .body
+        }
+    }
+
+    /// An item with nothing typed into it yet. Return on one of these ends the
+    /// list instead of making another empty item.
+    func isListItemEmpty(in textView: UITextView) -> Bool {
+        let string = (textView.text ?? "") as NSString
+        let paragraph = string.paragraphRange(for: textView.selectedRange)
+        guard paragraph.length > 0 else { return true }
+        return string
+            .substring(with: paragraph)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+    }
+
+    /// True when the caret sits at the first character of its paragraph, which
+    /// is where backspace means "stop being a list item".
+    func isAtParagraphStart(in textView: UITextView) -> Bool {
+        let string = (textView.text ?? "") as NSString
+        let selection = textView.selectedRange
+        guard selection.length == 0 else { return false }
+        return string.paragraphRange(for: selection).location == selection.location
+    }
+
+    private func setList(_ kind: TextListKind?, on paragraph: NSRange, in text: NSMutableAttributedString) {
+        guard paragraph.length > 0 else { return }
+        text.enumerateAttributes(in: paragraph, options: []) { attributes, range, _ in
+            text.setAttributes(
+                RichText.attributes(
+                    level: kind == nil ? RichText.level(in: attributes) : .body,
+                    bold: RichText.isBold(in: attributes),
+                    italic: RichText.isItalic(in: attributes),
+                    underlined: RichText.isUnderlined(in: attributes),
+                    list: kind,
+                    checked: kind == .checklist && RichText.isChecked(in: attributes),
+                    ink: inkColor
+                ),
+                range: range
+            )
         }
     }
 
@@ -139,7 +247,10 @@ final class RichTextController {
                             level: RichText.level(in: attributes),
                             bold: bold,
                             italic: italic,
-                            underlined: underlined
+                            underlined: underlined,
+                            list: RichText.list(in: attributes),
+                            checked: RichText.isChecked(in: attributes),
+                            ink: inkColor
                         ),
                         range: range
                     )
@@ -160,15 +271,31 @@ final class RichTextController {
         isStyling = true
         edit(textView)
         textView.typingAttributes = RichText.attributes(
-            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined, ink: inkColor
+            level: level,
+            bold: isBold,
+            italic: isItalic,
+            underlined: isUnderlined,
+            list: list,
+            ink: inkColor
         )
         isStyling = false
+        // Markers are painted on rather than typed in, so a restyle has to ask
+        // for the gutter back explicitly.
+        textView.setNeedsDisplay()
     }
 
     /// Replacing the whole string resets the caret, so it is put back.
     private func replace(_ textView: UITextView, with text: NSAttributedString) {
         let selection = textView.selectedRange
         textView.attributedText = text
-        textView.selectedRange = selection
+        textView.selectedRange = NSRange(
+            location: min(selection.location, text.length),
+            length: min(selection.length, max(0, text.length - selection.location))
+        )
+
+        // A programmatic edit never reaches the delegate, so without this the
+        // binding behind the text view keeps the unstyled text and the note
+        // saves without the change.
+        textView.delegate?.textViewDidChange?(textView)
     }
 }

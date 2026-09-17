@@ -25,14 +25,26 @@ struct RichTextView: UIViewRepresentable {
         view.keyboardDismissMode = .interactive
         view.attributedText = text
         view.typingAttributes = RichText.attributes(level: .body, ink: controller.inkColor)
+        view.inkColor = controller.inkColor
+        view.fillColor = controller.fillColor
         view.onDeleteBackwardAtStart = { [weak coordinator] in
             coordinator?.parent.onBackspaceAtStart() ?? false
+        }
+        view.onDeleteBackwardAtParagraphStart = { [weak coordinator, weak view] in
+            guard let controller = coordinator?.parent.controller, let view else { return false }
+            // Backspace at the head of a list item takes it out of the list
+            // before it starts eating the line above.
+            guard controller.list != nil, controller.isAtParagraphStart(in: view) else { return false }
+            controller.clearList()
+            return true
         }
         return view
     }
 
     func updateUIView(_ view: EditorTextView, context: Context) {
         context.coordinator.parent = self
+        view.inkColor = controller.inkColor
+        view.fillColor = controller.fillColor
 
         // Only push down when the text genuinely differs, otherwise every
         // keystroke would round-trip and fight the caret.
@@ -80,6 +92,9 @@ struct RichTextView: UIViewRepresentable {
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.attributedText
             parent.controller.syncState()
+            // Markers are painted on, so they are only right once the text they
+            // sit beside has been laid out again.
+            textView.setNeedsDisplay()
             (textView as? EditorTextView)?.revealCaret()
         }
 
@@ -95,34 +110,69 @@ struct RichTextView: UIViewRepresentable {
             replacementText replacement: String
         ) -> Bool {
             guard replacement == "\n" else { return true }
-            guard parent.controller.level != .body else { return true }
+            let controller = parent.controller
 
-            let bodyAttributes = RichText.attributes(level: .body, ink: parent.controller.inkColor)
+            if controller.list != nil {
+                // Return on an item with nothing in it ends the list, the way
+                // it does everywhere else. Otherwise the next line is an item.
+                if controller.isListItemEmpty(in: textView) {
+                    controller.clearList()
+                    return false
+                }
+                return continueParagraph(
+                    in: textView,
+                    at: range,
+                    with: RichText.attributes(
+                        level: .body, list: controller.list, ink: controller.inkColor
+                    )
+                )
+            }
 
+            guard controller.level != .body else { return true }
+
+            let bodyAttributes = RichText.attributes(level: .body, ink: controller.inkColor)
+
+            return continueParagraph(in: textView, at: range, with: bodyAttributes)
+        }
+
+        /// Inserts the line break itself carrying the attributes the next line
+        /// should have. UITextView rebuilds typingAttributes from the character
+        /// before the caret whenever the selection moves, so a break that
+        /// carried the old attributes would immediately undo this.
+        private func continueParagraph(
+            in textView: UITextView,
+            at range: NSRange,
+            with attributes: [NSAttributedString.Key: Any]
+        ) -> Bool {
             let storage = textView.textStorage
             storage.beginEditing()
             storage.replaceCharacters(
                 in: range,
-                with: NSAttributedString(string: "\n", attributes: bodyAttributes)
+                with: NSAttributedString(string: "\n", attributes: attributes)
             )
             storage.endEditing()
 
             textView.selectedRange = NSRange(location: range.location + 1, length: 0)
             parent.text = textView.attributedText
+            textView.setNeedsDisplay()
 
-            // Moving the caret makes UITextView rebuild typingAttributes from
-            // the surrounding text, which lands after this method returns and
-            // would overwrite anything set here. Assigning on the next pass is
-            // what makes the new line take body size and weight immediately.
+            // Moving the caret makes UITextView rebuild typingAttributes, which
+            // lands after this method returns and would overwrite anything set
+            // here. Assigning on the next pass is what makes the new line take
+            // the right size, weight and marker immediately.
             DispatchQueue.main.async {
-                textView.typingAttributes = bodyAttributes
+                textView.typingAttributes = attributes
                 self.parent.controller.syncState()
+                textView.setNeedsDisplay()
             }
             return false
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
             parent.controller.syncState()
+            // The caret moving is what tells an empty paragraph whether its
+            // marker should be there, so the gutter is repainted with it.
+            textView.setNeedsDisplay()
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {

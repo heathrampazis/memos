@@ -11,9 +11,11 @@ enum Spacing {
     /// Clearance between the last row of tiles and the home indicator.
     static let homeBottomInset: CGFloat = 56
 
-    /// List marker column. Nudge the gap if bullets sit off the text.
+    /// List marker column. The text of a list item starts at listIndent; the
+    /// marker is drawn in the space before it.
     static let listMarkerWidth: CGFloat = 20
     static let listMarkerGap: CGFloat = 8
+    static let listIndent: CGFloat = 28
 
     /// Breathing room under the last line. Keep this small: a large bottom
     /// inset gives the text view empty space to scroll into, which lets it

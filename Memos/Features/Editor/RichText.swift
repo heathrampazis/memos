@@ -39,6 +39,26 @@ enum TextLevel: String, Codable, CaseIterable {
     }
 }
 
+enum TextListKind: String, Codable, CaseIterable {
+    case bullet, numbered, checklist
+
+    var symbol: String {
+        switch self {
+        case .bullet: "list.bullet"
+        case .numbered: "list.number"
+        case .checklist: "checklist"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .bullet: "Bulleted list"
+        case .numbered: "Numbered list"
+        case .checklist: "Checklist"
+        }
+    }
+}
+
 extension NSAttributedString.Key {
     /// Which level a paragraph is, so the bar reflects the caret and styling
     /// survives a round trip through storage.
@@ -49,6 +69,14 @@ extension NSAttributedString.Key {
     /// two apart, so a heading reports itself bold and hands that to whatever
     /// follows it.
     static let memoBold = NSAttributedString.Key("memos.bold")
+
+    /// Which kind of list a paragraph belongs to. The markers themselves are
+    /// drawn, never inserted, so the text stays exactly what the author typed
+    /// and numbering never has to be rewritten into the string.
+    static let memoList = NSAttributedString.Key("memos.list")
+
+    /// A ticked checklist item.
+    static let memoChecked = NSAttributedString.Key("memos.checked")
 }
 
 enum RichText {
@@ -57,19 +85,46 @@ enum RichText {
         bold: Bool = false,
         italic: Bool = false,
         underlined: Bool = false,
+        list: TextListKind? = nil,
+        checked: Bool = false,
         ink: UIColor = UIColor(Theme.ink)
     ) -> [NSAttributedString.Key: Any] {
+        // A list is a body-level thing. A bulleted heading is not a shape this
+        // app has, and allowing it makes the marker column wrong for the font.
+        let level = list == nil ? level : .body
+        let ticked = list == .checklist && checked
+
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font(level: level, bold: bold, italic: italic),
-            .paragraphStyle: level.paragraphStyle,
-            .foregroundColor: ink,
+            .paragraphStyle: paragraphStyle(level: level, list: list),
+            .foregroundColor: ticked ? ink.withAlphaComponent(0.45) : ink,
             .memoLevel: level.rawValue,
             .memoBold: bold,
         ]
         if underlined {
             attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
         }
+        if let list {
+            attributes[.memoList] = list.rawValue
+            attributes[.memoChecked] = ticked
+        }
+        if ticked {
+            attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
+        }
         return attributes
+    }
+
+    /// Indented far enough to clear the marker column, with wrapped lines
+    /// landing under the first one rather than under the marker.
+    static func paragraphStyle(level: TextLevel, list: TextListKind?) -> NSParagraphStyle {
+        guard list != nil,
+              let style = level.paragraphStyle.mutableCopy() as? NSMutableParagraphStyle
+        else { return level.paragraphStyle }
+
+        style.firstLineHeadIndent = Spacing.listIndent
+        style.headIndent = Spacing.listIndent
+        style.paragraphSpacing = 2
+        return style
     }
 
     static func font(level: TextLevel, bold: Bool, italic: Bool) -> UIFont {
@@ -103,11 +158,27 @@ enum RichText {
         (attributes[.underlineStyle] as? Int ?? 0) != 0
     }
 
+    static func list(in attributes: [NSAttributedString.Key: Any]) -> TextListKind? {
+        guard let raw = attributes[.memoList] as? String else { return nil }
+        return TextListKind(rawValue: raw)
+    }
+
+    static func isChecked(in attributes: [NSAttributedString.Key: Any]) -> Bool {
+        attributes[.memoChecked] as? Bool ?? false
+    }
+
     /// Repaints every run to the given ink, leaving structure untouched.
     static func repainted(_ text: NSAttributedString, ink: UIColor) -> NSAttributedString {
         guard text.length > 0 else { return text }
         let copy = NSMutableAttributedString(attributedString: text)
-        copy.addAttribute(.foregroundColor, value: ink, range: NSRange(location: 0, length: copy.length))
+        let full = NSRange(location: 0, length: copy.length)
+
+        // Ticked items are dimmed, so repainting has to keep them dim rather
+        // than restoring them to full ink along with everything else.
+        copy.enumerateAttributes(in: full, options: []) { attributes, range, _ in
+            let value = isChecked(in: attributes) ? ink.withAlphaComponent(0.45) : ink
+            copy.addAttribute(.foregroundColor, value: value, range: range)
+        }
         return copy
     }
 
