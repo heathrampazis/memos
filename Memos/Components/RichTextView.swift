@@ -18,6 +18,7 @@ struct RichTextView: UIViewRepresentable {
         )
         view.textContainer.lineFragmentPadding = 0
         view.alwaysBounceVertical = true
+        view.showsVerticalScrollIndicator = false
         view.keyboardDismissMode = .interactive
         view.attributedText = text
         view.typingAttributes = RichText.attributes(level: .body, ink: controller.inkColor)
