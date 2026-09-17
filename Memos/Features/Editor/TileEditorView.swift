@@ -37,6 +37,12 @@ struct TileEditorView: View {
         }
         .background(tileColor.fill)
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
+        // Nothing scrolled under the bar before, so it never left its scroll-edge
+        // appearance. Now it does, and the system's own material is grey glass
+        // with a hairline under it. This makes the bar vanish into the note.
+        .background(
+            NavigationBarStyler(color: UIColor(tileColor.fill)).frame(width: 0, height: 0)
+        )
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
