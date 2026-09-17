@@ -288,12 +288,14 @@ struct TileEditorView: View {
     /// light tile stays black on a dark one.
     private func load() {
         controller.inkColor = UIColor(tileColor.ink)
+        controller.fillColor = UIColor(tileColor.fill)
         segments = NoteCodec.repainted(NoteCodec.decode(tile.bodyData), ink: UIColor(tileColor.ink))
         normalise()
     }
 
     private func reload() {
         controller.inkColor = UIColor(tileColor.ink)
+        controller.fillColor = UIColor(tileColor.fill)
         segments = NoteCodec.repainted(segments, ink: UIColor(tileColor.ink))
     }
 

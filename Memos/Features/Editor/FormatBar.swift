@@ -32,6 +32,16 @@ struct FormatBar: View {
                 iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
                 iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
                 iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
+
+                separator
+
+                ForEach(TextListKind.allCases, id: \.self) { kind in
+                    iconToggle(kind.symbol, isOn: controller.list == kind) {
+                        controller.toggle(list: kind)
+                    }
+                    .accessibilityLabel(kind.label)
+                }
+
                 Spacer(minLength: 0)
                 dismissButton
             }
@@ -46,6 +56,13 @@ struct FormatBar: View {
                 .padding(.bottom, -Spacing.trayBleed)
         }
         .animation(.easeOut(duration: 0.2), value: color.id)
+    }
+
+    private var separator: some View {
+        Capsule()
+            .fill(color.ink.opacity(0.14))
+            .frame(width: 1, height: 20)
+            .padding(.horizontal, 3)
     }
 
     private var dismissButton: some View {
