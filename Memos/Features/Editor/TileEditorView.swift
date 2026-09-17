@@ -47,6 +47,15 @@ struct TileEditorView: View {
             RichTextView(text: $body_, controller: controller)
                 .padding(.horizontal, Spacing.screen)
         }
+        // Sits inside the safe area inset, so it floats clear of the format
+        // tray rather than over it.
+        .overlay(alignment: .bottomTrailing) {
+            AddWidgetButton(color: tileColor) {
+                // Choosing and inserting a widget is its own ticket.
+            }
+            .padding(.trailing, Spacing.screen)
+            .padding(.bottom, 16)
+        }
         .background(tileColor.fill)
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)

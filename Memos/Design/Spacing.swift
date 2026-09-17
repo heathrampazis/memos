@@ -22,6 +22,7 @@ enum Spacing {
 
     /// The editing tray's top corners.
     static let circleButton: CGFloat = 44
+    static let addWidgetButton: CGFloat = 54
 
     static let trayRadius: CGFloat = 22
 
