@@ -2,18 +2,25 @@ import Foundation
 import SwiftUI
 
 /// Adds a widget to a tile. Pressing it opens a small cluster rather than doing
-/// anything itself, so drawings and the rest join the same column when they
-/// arrive without the button growing a mode.
+/// anything itself, so each new kind joins the same column without the button
+/// growing a mode.
 struct AddWidgetButton: View {
     let color: TileColor
     var onAudio: () -> Void
     var onPanel: (PanelKind) -> Void
+    var onDrawing: () -> Void
 
     @State private var isOpen = false
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 12) {
             if isOpen {
+                option("scribble.variable", label: "Drawing") {
+                    close()
+                    onDrawing()
+                }
+                .transition(reveal)
+
                 panelMenu
                     .transition(reveal)
 
