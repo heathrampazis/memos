@@ -31,7 +31,12 @@ struct TileEditorView: View {
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .overlay(alignment: .bottomTrailing) {
-            AddWidgetButton(color: tileColor, onAudio: addAudioWidget, onPanel: addPanel)
+            AddWidgetButton(
+                color: tileColor,
+                onAudio: addAudioWidget,
+                onPanel: addPanel,
+                onDrawing: addDrawing
+            )
                 .padding(.trailing, Spacing.screen)
                 .padding(.bottom, 16)
         }
@@ -125,6 +130,11 @@ struct TileEditorView: View {
                     removeWidget(segment.id)
                 }
                 .padding(.vertical, 7)
+            } else if segment.drawing != nil {
+                DrawingWidget(block: $segment.drawing.required(), color: tileColor) {
+                    removeWidget(segment.id)
+                }
+                .padding(.vertical, 7)
             } else {
                 RichTextView(
                     segmentID: segment.id,
@@ -161,6 +171,10 @@ struct TileEditorView: View {
         // A panel is inserted empty and takes the caret itself, so the keyboard
         // stays up and lands in the box that was just made.
         insert(NoteSegment(panel: PanelBlock(id: UUID(), kind: kind)), thenType: false)
+    }
+
+    private func addDrawing() {
+        insert(NoteSegment(drawing: DrawingBlock(id: UUID())), thenType: false)
     }
 
     /// The widget takes the caret's line as the place to break the note in two:
@@ -200,6 +214,7 @@ struct TileEditorView: View {
         else { return }
 
         if let clip = segments[index].clip { AudioStore.delete(clip.id) }
+        if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
         withAnimation(.easeOut(duration: 0.2)) {
             segments.remove(at: index)
         }
@@ -223,6 +238,7 @@ struct TileEditorView: View {
             // or a written panel is deleted on purpose, from its own menu.
             guard previous.isEmptyWidget else { return true }
             if let clip = previous.clip { AudioStore.delete(clip.id) }
+            if let drawing = previous.drawing { DrawingStore.delete(drawing.id) }
             segments.remove(at: index - 1)
         }
 
@@ -302,6 +318,7 @@ struct TileEditorView: View {
         let context = context
         let tile = tile
         AudioStore.deleteAll(in: segments)
+        DrawingStore.deleteAll(in: segments)
 
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
