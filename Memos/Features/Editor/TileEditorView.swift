@@ -38,7 +38,8 @@ struct TileEditorView: View {
                 color: tileColor,
                 onAudio: addAudioWidget,
                 onPanel: addPanel,
-                onDrawing: addDrawing
+                onDrawing: addDrawing,
+                onPhoto: addPhoto
             )
                 .padding(.trailing, Spacing.screen)
                 .padding(.bottom, 16)
@@ -153,6 +154,10 @@ struct TileEditorView: View {
                 DrawingWidget(block: $segment.drawing.required(), color: tileColor)
                     .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
+            } else if segment.photo != nil {
+                PhotoWidget(photo: $segment.photo.required(), color: tileColor)
+                    .modifier(deletable(segment.id))
+                    .padding(.vertical, 7)
             } else {
                 RichTextView(
                     segmentID: segment.id,
@@ -214,6 +219,10 @@ struct TileEditorView: View {
         insert(NoteSegment(drawing: DrawingBlock(id: UUID())), thenType: false)
     }
 
+    private func addPhoto() {
+        insert(NoteSegment(photo: PhotoBlock(id: UUID())), thenType: false)
+    }
+
     /// The widget takes the caret's line as the place to break the note in two:
     /// the text above stays in one run, the text below starts another, and the
     /// widget sits between them. With nothing focused it goes on the end.
@@ -252,6 +261,7 @@ struct TileEditorView: View {
 
         if let clip = segments[index].clip { AudioStore.delete(clip.id) }
         if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
+        if let photo = segments[index].photo { PhotoStore.delete(photo.id) }
         withAnimation(.spring(response: 0.34, dampingFraction: 0.8)) {
             segments.remove(at: index)
         }
@@ -278,6 +288,7 @@ struct TileEditorView: View {
             guard previous.isEmptyWidget else { return true }
             if let clip = previous.clip { AudioStore.delete(clip.id) }
             if let drawing = previous.drawing { DrawingStore.delete(drawing.id) }
+            if let photo = previous.photo { PhotoStore.delete(photo.id) }
             segments.remove(at: index - 1)
         }
 
@@ -347,6 +358,7 @@ struct TileEditorView: View {
 
         if segment.clip != nil { return "voice memo" }
         if segment.drawing != nil { return "drawing" }
+        if segment.photo != nil { return "photo" }
         return "panel"
     }
 
@@ -390,6 +402,7 @@ struct TileEditorView: View {
         let tile = tile
         AudioStore.deleteAll(in: segments)
         DrawingStore.deleteAll(in: segments)
+        PhotoStore.deleteAll(in: segments)
 
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {

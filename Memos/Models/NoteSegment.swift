@@ -10,6 +10,7 @@ struct NoteSegment: Identifiable, Equatable {
     var clip: AudioClip?
     var panel: PanelBlock?
     var drawing: DrawingBlock?
+    var photo: PhotoBlock?
 
     init(id: UUID = UUID(), text: NSAttributedString = NSAttributedString()) {
         self.id = id
@@ -34,7 +35,13 @@ struct NoteSegment: Identifiable, Equatable {
         self.drawing = drawing
     }
 
-    var isText: Bool { clip == nil && panel == nil && drawing == nil }
+    init(id: UUID = UUID(), photo: PhotoBlock) {
+        self.id = id
+        self.text = NSAttributedString()
+        self.photo = photo
+    }
+
+    var isText: Bool { clip == nil && panel == nil && drawing == nil && photo == nil }
 
     /// A widget nothing has been put into yet. Backspace may take one of these;
     /// anything with a recording or writing in it has to be deleted on purpose.
@@ -42,6 +49,7 @@ struct NoteSegment: Identifiable, Equatable {
         if let clip = clip { return clip.isEmpty }
         if let panel = panel { return panel.text.isEmpty }
         if let drawing = drawing { return drawing.isEmpty }
+        if let photo = photo { return photo.isEmpty }
         return false
     }
 }
@@ -77,20 +85,24 @@ enum NoteCodec {
         var clip: AudioClip?
         var panel: PanelBlock?
         var drawing: DrawingBlock?
+        var photo: PhotoBlock?
     }
 
     static func encode(_ segments: [NoteSegment]) -> Data {
         let entries = segments.map { segment in
             if let clip = segment.clip {
-                return Entry(text: nil, clip: clip, panel: nil, drawing: nil)
+                return Entry(clip: clip)
             }
             if let panel = segment.panel {
-                return Entry(text: nil, clip: nil, panel: panel, drawing: nil)
+                return Entry(panel: panel)
             }
             if let drawing = segment.drawing {
-                return Entry(text: nil, clip: nil, panel: nil, drawing: drawing)
+                return Entry(drawing: drawing)
             }
-            return Entry(text: RichText.archive(segment.text), clip: nil, panel: nil, drawing: nil)
+            if let photo = segment.photo {
+                return Entry(photo: photo)
+            }
+            return Entry(text: RichText.archive(segment.text))
         }
         return (try? JSONEncoder().encode(entries)) ?? Data()
     }
@@ -106,6 +118,7 @@ enum NoteCodec {
             if let clip = entry.clip { return NoteSegment(clip: clip) }
             if let panel = entry.panel { return NoteSegment(panel: panel) }
             if let drawing = entry.drawing { return NoteSegment(drawing: drawing) }
+            if let photo = entry.photo { return NoteSegment(photo: photo) }
             return NoteSegment(text: RichText.restore(entry.text ?? Data()))
         }
         return segments.isEmpty ? [NoteSegment()] : segments
@@ -125,6 +138,9 @@ enum NoteCodec {
                 }
                 if let drawing = segment.drawing {
                     return drawing.isEmpty ? nil : "\u{270E} Drawing"
+                }
+                if let photo = segment.photo {
+                    return photo.isEmpty ? nil : "\u{25A3} Photo"
                 }
                 let text = segment.text.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 return text.isEmpty ? nil : text

@@ -9,12 +9,19 @@ struct AddWidgetButton: View {
     var onAudio: () -> Void
     var onPanel: (PanelKind) -> Void
     var onDrawing: () -> Void
+    var onPhoto: () -> Void
 
     @State private var isOpen = false
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 12) {
             if isOpen {
+                option("photo.fill", label: "Photo") {
+                    close()
+                    onPhoto()
+                }
+                .transition(reveal)
+
                 option("scribble.variable", label: "Drawing") {
                     close()
                     onDrawing()
