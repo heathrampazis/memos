@@ -8,7 +8,6 @@ import PencilKit
 struct DrawingWidget: View {
     @Binding var block: DrawingBlock
     let color: TileColor
-    var onDelete: () -> Void
 
     @State private var preview: UIImage?
     @State private var isEditing = false
@@ -25,14 +24,6 @@ struct DrawingWidget: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(color.ink.opacity(0.10))
         )
-        .contextMenu {
-            Button { isEditing = true } label: {
-                Label("Edit drawing", systemImage: "pencil")
-            }
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
         .fullScreenCover(isPresented: $isEditing) {
             DrawingEditorView(id: block.id, color: color) { drawing in
                 DrawingStore.save(drawing, id: block.id)

@@ -16,6 +16,9 @@ struct TileEditorView: View {
     @FocusState private var titleFocused: Bool
     @State private var isPickingColor = false
     @State private var isDeleting = false
+    @State private var isEditingWidgets = false
+    @State private var pendingWidget: UUID?
+    @State private var isConfirmingWidget = false
 
     var body: some View {
         // Title, text and widgets all live in one scroll, so a note with a
@@ -72,10 +75,28 @@ struct TileEditorView: View {
                 dismiss()
             }
         }
+        .confirmationDialog(
+            "Delete this \(pendingWidgetName)?",
+            isPresented: $isConfirmingWidget,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let id = pendingWidget { removeWidget(id) }
+                pendingWidget = nil
+            }
+            Button("Cancel", role: .cancel) { pendingWidget = nil }
+        } message: {
+            Text("It will be removed from the note.")
+        }
         .onAppear(perform: load)
         .onChange(of: tile.colorIndex) { reload() }
         .onChange(of: settings.palette) { reload() }
         .onChange(of: segments) { scheduleSave() }
+        // Typing again is the clearest sign the note is being written, not
+        // rearranged.
+        .onChange(of: controller.isEditing) { _, editing in
+            if editing { stopEditingWidgets() }
+        }
         .onChange(of: tile.title) { scheduleSave() }
         .onChange(of: tile.colorIndex) { tile.touch() }
         .onDisappear {
@@ -121,20 +142,17 @@ struct TileEditorView: View {
     private var runs: some View {
         ForEach($segments) { $segment in
             if segment.clip != nil {
-                AudioWidget(clip: $segment.clip.required(), color: tileColor) {
-                    removeWidget(segment.id)
-                }
-                .padding(.vertical, 7)
+                AudioWidget(clip: $segment.clip.required(), color: tileColor)
+                    .modifier(deletable(segment.id))
+                    .padding(.vertical, 7)
             } else if segment.panel != nil {
-                PanelWidget(panel: $segment.panel.required(), color: tileColor) {
-                    removeWidget(segment.id)
-                }
-                .padding(.vertical, 7)
+                PanelWidget(panel: $segment.panel.required(), color: tileColor)
+                    .modifier(deletable(segment.id))
+                    .padding(.vertical, 7)
             } else if segment.drawing != nil {
-                DrawingWidget(block: $segment.drawing.required(), color: tileColor) {
-                    removeWidget(segment.id)
-                }
-                .padding(.vertical, 7)
+                DrawingWidget(block: $segment.drawing.required(), color: tileColor)
+                    .modifier(deletable(segment.id))
+                    .padding(.vertical, 7)
             } else {
                 RichTextView(
                     segmentID: segment.id,
@@ -144,6 +162,25 @@ struct TileEditorView: View {
                 )
             }
         }
+    }
+
+    /// Every widget wears the same delete affordance, so the wiring is written
+    /// once here rather than three times in the cards.
+    private func deletable(_ id: UUID) -> DeletableWidget {
+        DeletableWidget(
+            isEditing: isEditingWidgets,
+            color: tileColor,
+            seed: seed(for: id),
+            onHold: holdWidgets,
+            onDismiss: stopEditingWidgets,
+            onDelete: { confirmRemove(id) }
+        )
+    }
+
+    /// Enough to give each widget its own wobble period so they do not swing
+    /// in lockstep.
+    private func seed(for id: UUID) -> Int {
+        Int(id.uuid.0)
     }
 
     /// Empty room under the note. Tapping it puts the caret at the end, which
@@ -215,7 +252,7 @@ struct TileEditorView: View {
 
         if let clip = segments[index].clip { AudioStore.delete(clip.id) }
         if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
-        withAnimation(.easeOut(duration: 0.2)) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.8)) {
             segments.remove(at: index)
         }
 
@@ -223,6 +260,8 @@ struct TileEditorView: View {
             joinRuns(endingAt: segments[index].id)
         }
         normalise()
+
+        if !segments.contains(where: { !$0.isText }) { stopEditingWidgets() }
     }
 
     /// Backspace at the very start of a run. An empty widget above is taken the
@@ -277,8 +316,38 @@ struct TileEditorView: View {
     }
 
     private func focusEnd() {
+        stopEditingWidgets()
         guard let last = segments.last(where: { $0.isText }) else { return }
         controller.focus(last.id, at: last.text.length)
+    }
+
+    // MARK: Deleting widgets
+
+    private func holdWidgets() {
+        // The keyboard would cover half the note and the format bar means
+        // nothing while widgets are being removed.
+        controller.endEditing()
+        withAnimation(.easeOut(duration: 0.2)) { isEditingWidgets = true }
+    }
+
+    private func stopEditingWidgets() {
+        guard isEditingWidgets else { return }
+        withAnimation(.easeOut(duration: 0.2)) { isEditingWidgets = false }
+    }
+
+    private func confirmRemove(_ id: UUID) {
+        pendingWidget = id
+        isConfirmingWidget = true
+    }
+
+    private var pendingWidgetName: String {
+        guard let id = pendingWidget,
+              let segment = segments.first(where: { $0.id == id })
+        else { return "widget" }
+
+        if segment.clip != nil { return "voice memo" }
+        if segment.drawing != nil { return "drawing" }
+        return "panel"
     }
 
     // MARK: Loading and saving

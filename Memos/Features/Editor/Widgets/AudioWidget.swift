@@ -7,7 +7,6 @@ import SwiftUI
 struct AudioWidget: View {
     @Binding var clip: AudioClip
     let color: TileColor
-    var onDelete: () -> Void
 
     @State private var recorder = AudioRecorder()
     @State private var playback = AudioPlayback()
@@ -40,19 +39,12 @@ struct AudioWidget: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(color.ink.opacity(0.10))
         )
-        .contextMenu {
-            Button(action: rerecord) {
-                Label("Record again", systemImage: "arrow.counterclockwise")
-            }
-            .disabled(recorder.isRecording)
-
-            Button(role: .destructive, action: remove) {
-                Label("Delete", systemImage: "trash")
-            }
-        }
         .onDisappear {
             playback.pause()
-            if recorder.isRecording { finishRecording() }
+            // Not saved: the widget may be going away because it was just
+            // deleted, and writing a finished clip back through a binding whose
+            // segment has gone is how you get a crash instead of a recording.
+            if recorder.isRecording { recorder.cancel(id: clip.id) }
         }
     }
 
@@ -150,19 +142,6 @@ struct AudioWidget: View {
         clip = finished
     }
 
-    private func rerecord() {
-        playback.reset()
-        AudioStore.delete(clip.id)
-        clip.duration = 0
-        clip.samples = []
-        recorder.start(id: clip.id)
-    }
-
-    private func remove() {
-        playback.pause()
-        if recorder.isRecording { recorder.cancel(id: clip.id) }
-        onDelete()
-    }
 }
 
 extension Binding where Value == AudioClip? {
