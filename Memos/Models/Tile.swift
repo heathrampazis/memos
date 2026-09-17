@@ -16,7 +16,8 @@ final class Tile {
     /// search read this rather than unarchiving the body.
     var plainText: String
 
-    /// Index into TilePalette. 0 is plain paper.
+    /// Which slot in the active palette this tile uses. The palette itself is
+    /// an app setting, so the same index recolours when the palette changes.
     var colorIndex: Int
 
     var createdAt: Date

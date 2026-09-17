@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// A round icon button on a soft tint of the ink colour. Used for navigation
-/// and editor actions, so it works on a white card or a coloured tile alike.
+/// A round icon button on a soft tint of whatever ink it is sitting on. The
+/// tint has to be passed in: a button on a tile takes the tile's ink, one on
+/// the canvas takes the app's.
 struct CircleIconButton: View {
     let systemImage: String
+    var tint: Color = Theme.ink
     var action: () -> Void
 
     var body: some View {
@@ -11,18 +13,20 @@ struct CircleIconButton: View {
             Image(systemName: systemImage)
                 .font(.system(size: 17, weight: .semibold))
         }
-        .buttonStyle(SoftCircleButtonStyle())
+        .buttonStyle(SoftCircleButtonStyle(tint: tint))
     }
 }
 
 struct SoftCircleButtonStyle: ButtonStyle {
+    var tint: Color = Theme.ink
+
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
 
         return configuration.label
-            .foregroundStyle(Theme.ink.opacity(pressed ? 0.9 : 0.66))
+            .foregroundStyle(tint.opacity(pressed ? 1 : 0.8))
             .frame(width: Spacing.circleButton, height: Spacing.circleButton)
-            .background(Circle().fill(Theme.ink.opacity(pressed ? 0.17 : 0.08)))
+            .background(Circle().fill(tint.opacity(pressed ? 0.20 : 0.11)))
             .scaleEffect(pressed ? 0.88 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.55), value: pressed)
     }
@@ -34,5 +38,5 @@ struct SoftCircleButtonStyle: ButtonStyle {
         CircleIconButton(systemImage: "ellipsis") {}
     }
     .padding(40)
-    .background(Theme.card)
+    .background(Theme.canvas)
 }

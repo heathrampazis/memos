@@ -5,9 +5,10 @@ import SwiftUI
 /// itself stays model-free.
 struct TileView: View {
     let tile: Tile
+    let color: TileColor
 
     var body: some View {
-        StickyCard(color: TilePalette.color(tile.colorIndex), tilt: tile.tilt) {
+        StickyCard(color: color, tilt: tile.tilt) {
             if tile.isBlank {
                 blank
             } else {
@@ -21,7 +22,7 @@ struct TileView: View {
             Spacer()
             Image(systemName: "plus")
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(TileInk.faint)
+                .foregroundStyle(color.inkFaint)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -31,19 +32,19 @@ struct TileView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(tile.displayTitle)
                 .font(Typography.tileTitle)
-                .foregroundStyle(TileInk.primary)
+                .foregroundStyle(color.ink)
                 .lineLimit(2)
 
             Text(tile.plainText)
                 .font(Typography.tileBody)
-                .foregroundStyle(TileInk.secondary)
+                .foregroundStyle(color.inkSecondary)
                 .lineLimit(4)
 
             Spacer(minLength: 0)
 
             Text(tile.updatedAt.formatted(.relative(presentation: .numeric)))
                 .font(Typography.tileFooter)
-                .foregroundStyle(TileInk.tertiary)
+                .foregroundStyle(color.inkTertiary)
         }
     }
 }

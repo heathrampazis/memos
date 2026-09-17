@@ -9,6 +9,9 @@ import UIKit
 final class RichTextController {
     weak var textView: UITextView?
 
+    /// Text colour for the tile this editor is showing.
+    var inkColor: UIColor = UIColor(Theme.ink)
+
     private(set) var level: TextLevel = .body
     private(set) var isBold = false
     private(set) var isItalic = false
@@ -35,7 +38,7 @@ final class RichTextController {
         // text whenever the caret moves and does not carry custom keys across,
         // so without this the level is lost the moment you move.
         textView.typingAttributes = RichText.attributes(
-            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined
+            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined, ink: inkColor
         )
     }
 
@@ -126,7 +129,7 @@ final class RichTextController {
         isStyling = true
         edit(textView)
         textView.typingAttributes = RichText.attributes(
-            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined
+            level: level, bold: isBold, italic: isItalic, underlined: isUnderlined, ink: inkColor
         )
         isStyling = false
     }

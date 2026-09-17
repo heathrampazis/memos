@@ -4,6 +4,7 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppSettings.self) private var settings
     @Query(sort: \Tile.createdAt) private var tiles: [Tile]
 
     @State private var openTile: Tile?
@@ -11,6 +12,7 @@ struct HomeView: View {
     @State private var isArranging = false
     @State private var pendingDelete: Tile?
     @State private var isConfirmingDelete = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -21,7 +23,7 @@ struct HomeView: View {
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.homeBottomInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Theme.canvas)
+            .background(settings.canvas)
             .contentShape(Rectangle())
             .onTapGesture { stopArranging() }
             .navigationDestination(isPresented: $isEditorOpen) {
@@ -32,6 +34,9 @@ struct HomeView: View {
             .onChange(of: isEditorOpen) { _, presented in
                 guard !presented else { return }
                 DispatchQueue.main.async { openTile = nil }
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
             }
             .confirmationDialog(
                 "Delete this tile?",
@@ -52,14 +57,19 @@ struct HomeView: View {
             Text("memos")
                 .font(Typography.wordmark)
                 .kerning(-1)
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(settings.canvasInk)
             Spacer()
 
             if isArranging {
                 Button("Done") { stopArranging() }
                     .font(Typography.barLabel)
-                    .foregroundStyle(Theme.ink)
+                    .foregroundStyle(settings.canvasInk)
                     .transition(.opacity)
+            } else {
+                CircleIconButton(systemImage: "gearshape", tint: settings.canvasInk) {
+                    isShowingSettings = true
+                }
+                .transition(.opacity)
             }
         }
         .padding(.bottom, 18)
@@ -87,6 +97,7 @@ struct HomeView: View {
         case .tile(let tile, let index):
             BoardTile(
                 tile: tile,
+                color: settings.color(tile.colorIndex),
                 index: index,
                 isEditing: isArranging,
                 onOpen: { open(tile) },
@@ -101,7 +112,11 @@ struct HomeView: View {
             )
 
         case .free:
-            FreeSlotView(action: addTile)
+            FreeSlotView(
+                fill: settings.slotFill,
+                outline: settings.slotOutline,
+                action: addTile
+            )
                 .disabled(isArranging)
                 .opacity(isArranging ? 0.45 : 1)
         }

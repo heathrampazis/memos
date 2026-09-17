@@ -1,40 +1,90 @@
 import SwiftUI
 
+enum TilePaletteKind: String, CaseIterable, Identifiable, Codable {
+    case colour, paper, slate
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .colour: "Colour"
+        case .paper: "Paper"
+        case .slate: "Slate"
+        }
+    }
+
+    var caption: String {
+        switch self {
+        case .colour: "Highlighter brights"
+        case .paper: "Warm neutrals"
+        case .slate: "Cool greys"
+        }
+    }
+}
+
 struct TileColor: Identifiable, Hashable {
     let id: Int
     let name: String
     let fill: Color
-    /// The hard offset under a tile.
+    /// The delete badge and other pressed-in surfaces.
     let shadow: Color
-    /// Trays and sheets sitting over the tile: a step darker than the page, so
-    /// they read as chrome without bringing in a colour from somewhere else.
+    /// Trays and sheets over the tile: a step away from the page so they read
+    /// as chrome without bringing in a colour from somewhere else.
     let tray: Color
-    /// Only the white tile needs an outline; the coloured ones separate
-    /// themselves from the canvas.
-    let edge: Color?
+    let edge: Color
+    /// Text on this tile.
+    let ink: Color
+
+    var inkSecondary: Color { ink.opacity(0.74) }
+    var inkTertiary: Color { ink.opacity(0.55) }
+    var inkFaint: Color { ink.opacity(0.42) }
 }
 
-enum TilePalette {
-    static let all: [TileColor] = [
-        TileColor(id: 0, name: "Paper",  fill: Color(hex: 0xFFFFFF), shadow: Color(hex: 0xE2DBCB), tray: Color(hex: 0xF4EFE6), edge: Theme.cardEdge),
-        TileColor(id: 1, name: "Yellow", fill: Color(hex: 0xFFD12E), shadow: Color(hex: 0xE0B828), tray: Color(hex: 0xEDC12A), edge: nil),
-        TileColor(id: 2, name: "Orange", fill: Color(hex: 0xFF9F43), shadow: Color(hex: 0xE08C3B), tray: Color(hex: 0xED933E), edge: nil),
-        TileColor(id: 3, name: "Rose",   fill: Color(hex: 0xFF8FA8), shadow: Color(hex: 0xE07E94), tray: Color(hex: 0xED849B), edge: nil),
-        TileColor(id: 4, name: "Green",  fill: Color(hex: 0x46D89C), shadow: Color(hex: 0x3EBE89), tray: Color(hex: 0x41C790), edge: nil),
-        TileColor(id: 5, name: "Blue",   fill: Color(hex: 0x4FBDF7), shadow: Color(hex: 0x46A6D9), tray: Color(hex: 0x49AEE4), edge: nil),
-        TileColor(id: 6, name: "Violet", fill: Color(hex: 0xB69EFF), shadow: Color(hex: 0xA08BE0), tray: Color(hex: 0xA892EB), edge: nil),
-    ]
+enum TilePalettes {
+    private static let names = ["Base", "Yellow", "Orange", "Rose", "Green", "Blue", "Violet"]
 
-    static func color(_ index: Int) -> TileColor {
-        all.indices.contains(index) ? all[index] : all[0]
+    static func colors(for kind: TilePaletteKind) -> [TileColor] {
+        fills(for: kind).enumerated().map { index, hex in
+            build(index, names[index], hex)
+        }
     }
-}
 
-/// Text sitting on a tile. Ink at reduced opacity rather than a fixed grey, so
-/// it settles into whatever colour the tile is instead of fighting it.
-enum TileInk {
-    static let primary = Theme.ink
-    static let secondary = Theme.ink.opacity(0.70)
-    static let tertiary = Theme.ink.opacity(0.45)
-    static let faint = Theme.ink.opacity(0.32)
+    static func color(_ index: Int, in kind: TilePaletteKind) -> TileColor {
+        let all = colors(for: kind)
+        return all.indices.contains(index) ? all[index] : all[0]
+    }
+
+    /// Every fill stays light enough to carry ink text. Earlier versions of the
+    /// neutral ramps ran too dark at the end, which is what made secondary and
+    /// placeholder text disappear on the last few tiles.
+    private static func fills(for kind: TilePaletteKind) -> [UInt32] {
+        switch kind {
+        case .colour:
+            [0xFFFFFF, 0xFFD12E, 0xFF9F43, 0xFF8FA8, 0x46D89C, 0x4FBDF7, 0xB69EFF]
+        case .paper:
+            [0xFFFDF7, 0xFAF5EA, 0xF3EBDB, 0xEBE1CD, 0xE3D7BE, 0xDACCAF, 0xD1C1A1]
+        case .slate:
+            [0xFFFFFF, 0xF6F9FC, 0xEBF1F7, 0xDFE7F0, 0xD3DDE8, 0xC6D2E0, 0xB9C7D8]
+        }
+    }
+
+    private static func build(_ id: Int, _ name: String, _ hex: UInt32) -> TileColor {
+        TileColor(
+            id: id,
+            name: name,
+            fill: Color(hex: hex),
+            shadow: Color(hex: scaled(hex, 0.88)),
+            tray: Color(hex: scaled(hex, 0.93)),
+            edge: Color(hex: scaled(hex, 0.94)),
+            ink: Color(hex: 0x17120E)
+        )
+    }
+
+    private static func scaled(_ hex: UInt32, _ k: Double) -> UInt32 {
+        let channel = { (shift: UInt32) -> UInt32 in
+            let value = Double((hex >> shift) & 0xFF) * k
+            return UInt32(max(0, min(255, value.rounded())))
+        }
+        return (channel(16) << 16) | (channel(8) << 8) | channel(0)
+    }
 }
