@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import SwiftData
 
 struct TileEditorView: View {
@@ -7,6 +8,7 @@ struct TileEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
+    @Environment(AppSettings.self) private var settings
 
     @State private var controller = RichTextController()
     @State private var body_ = NSAttributedString()
@@ -17,11 +19,22 @@ struct TileEditorView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TextField("Title", text: $tile.title, axis: .vertical)
+            TextField("", text: $tile.title, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(Typography.editorTitle)
-                .foregroundStyle(Theme.ink)
+                .foregroundStyle(tileColor.ink)
                 .focused($titleFocused)
+                // Drawn by hand: a TextField prompt renders in a system grey
+                // that ignores the tile's ink, and disappears on the paler
+                // neutral tiles.
+                .overlay(alignment: .leading) {
+                    if tile.title.isEmpty {
+                        Text("Title")
+                            .font(Typography.editorTitle)
+                            .foregroundStyle(tileColor.inkTertiary)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .padding(.horizontal, Spacing.screen)
                 .padding(.top, 8)
                 .padding(.bottom, 10)
@@ -40,12 +53,12 @@ struct TileEditorView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                CircleIconButton(systemImage: "chevron.left") {
+                CircleIconButton(systemImage: "chevron.left", tint: tileColor.ink) {
                     dismiss()
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
-                CircleIconButton(systemImage: "ellipsis") {
+                CircleIconButton(systemImage: "ellipsis", tint: tileColor.ink) {
                     isPickingColor = true
                 }
             }
@@ -61,6 +74,8 @@ struct TileEditorView: View {
             }
         }
         .onAppear(perform: load)
+        .onChange(of: tile.colorIndex) { reload() }
+        .onChange(of: settings.palette) { reload() }
         .onChange(of: body_) { scheduleSave() }
         .onChange(of: tile.title) { scheduleSave() }
         .onChange(of: tile.colorIndex) { tile.touch() }
@@ -76,12 +91,21 @@ struct TileEditorView: View {
     }
 
     private var tileColor: TileColor {
-        TilePalette.color(tile.colorIndex)
+        settings.color(tile.colorIndex)
     }
 
+    /// The archived text has whatever ink colour it was written with baked in.
+    /// Changing palette or appearance has to repaint it, or a note written on a
+    /// light tile stays black on a dark one.
     private func load() {
         let restored = RichText.restore(tile.bodyData)
-        body_ = restored.length == 0 ? NSAttributedString() : restored
+        body_ = RichText.repainted(restored, ink: UIColor(tileColor.ink))
+        controller.inkColor = UIColor(tileColor.ink)
+    }
+
+    private func reload() {
+        controller.inkColor = UIColor(tileColor.ink)
+        body_ = RichText.repainted(body_, ink: UIColor(tileColor.ink))
     }
 
     private func scheduleSave() {

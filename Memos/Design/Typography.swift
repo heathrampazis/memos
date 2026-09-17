@@ -10,6 +10,8 @@ enum Typography {
     static let tileBody = Font.system(size: 12, weight: .medium)
     static let tileFooter = Font.system(size: 10.5, weight: .semibold)
 
+    static let sectionLabel = Font.system(size: 11, weight: .heavy)
+    static let rowTitle = Font.system(size: 15.5, weight: .bold)
     static let sheetCaption = Font.system(size: 13, weight: .semibold)
     static let sheetTitle = Font.system(size: 20, weight: .heavy)
     static let barLabel = Font.system(size: 13, weight: .bold)

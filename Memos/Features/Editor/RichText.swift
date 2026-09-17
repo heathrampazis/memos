@@ -56,12 +56,13 @@ enum RichText {
         level: TextLevel,
         bold: Bool = false,
         italic: Bool = false,
-        underlined: Bool = false
+        underlined: Bool = false,
+        ink: UIColor = UIColor(Theme.ink)
     ) -> [NSAttributedString.Key: Any] {
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font(level: level, bold: bold, italic: italic),
             .paragraphStyle: level.paragraphStyle,
-            .foregroundColor: UIColor(Theme.ink),
+            .foregroundColor: ink,
             .memoLevel: level.rawValue,
             .memoBold: bold,
         ]
@@ -100,6 +101,14 @@ enum RichText {
 
     static func isUnderlined(in attributes: [NSAttributedString.Key: Any]) -> Bool {
         (attributes[.underlineStyle] as? Int ?? 0) != 0
+    }
+
+    /// Repaints every run to the given ink, leaving structure untouched.
+    static func repainted(_ text: NSAttributedString, ink: UIColor) -> NSAttributedString {
+        guard text.length > 0 else { return text }
+        let copy = NSMutableAttributedString(attributedString: text)
+        copy.addAttribute(.foregroundColor, value: ink, range: NSRange(location: 0, length: copy.length))
+        return copy
     }
 
     /// Archive and restore. Attachments — drawings, audio, images — travel

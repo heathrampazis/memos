@@ -2,6 +2,8 @@ import SwiftUI
 
 /// An empty place on the board. Tapping it makes a tile.
 struct FreeSlotView: View {
+    let fill: Color
+    let outline: Color
     var action: () -> Void
 
     private var shape: RoundedRectangle {
@@ -11,17 +13,14 @@ struct FreeSlotView: View {
     var body: some View {
         Button(action: action) {
             shape
-                .fill(Theme.slotFill)
+                .fill(fill)
                 .overlay(
-                    shape.strokeBorder(
-                        Theme.slotOutline,
-                        style: StrokeStyle(lineWidth: 2, dash: [7, 6])
-                    )
+                    shape.strokeBorder(outline, style: StrokeStyle(lineWidth: 2, dash: [7, 6]))
                 )
                 .overlay {
                     Image(systemName: "plus")
                         .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(Theme.slotOutline)
+                        .foregroundStyle(outline)
                 }
         }
         .buttonStyle(FreeSlotButtonStyle())

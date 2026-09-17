@@ -42,7 +42,7 @@ struct FormatBar: View {
         .background {
             shape
                 .fill(color.tray)
-                .overlay(shape.stroke(Theme.ink.opacity(0.10), lineWidth: 1))
+                .overlay(shape.stroke(color.ink.opacity(0.12), lineWidth: 1))
                 .padding(.bottom, -Spacing.trayBleed)
         }
         .animation(.easeOut(duration: 0.2), value: color.id)
@@ -54,7 +54,7 @@ struct FormatBar: View {
         } label: {
             Image(systemName: "keyboard.chevron.compact.down")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.ink.opacity(0.55))
+                .foregroundStyle(color.ink.opacity(0.55))
                 .frame(width: 42, height: 40)
         }
         .buttonStyle(.plain)
@@ -70,11 +70,11 @@ struct FormatBar: View {
         } label: {
             Text(level.label)
                 .font(Typography.barLabel)
-                .foregroundStyle(active ? color.fill : Theme.ink)
+                .foregroundStyle(active ? color.fill : color.ink)
                 .padding(.horizontal, 14)
                 .frame(height: 36)
                 .background(
-                    Capsule().fill(active ? Theme.ink : Theme.ink.opacity(0.09))
+                    Capsule().fill(active ? color.ink : color.ink.opacity(0.10))
                 )
         }
         .buttonStyle(.plain)
@@ -84,11 +84,11 @@ struct FormatBar: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isOn ? color.fill : Theme.ink)
+                .foregroundStyle(isOn ? color.fill : color.ink)
                 .frame(width: 42, height: 40)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(isOn ? Theme.ink : Color.clear)
+                        .fill(isOn ? color.ink : Color.clear)
                 )
         }
         .buttonStyle(.plain)

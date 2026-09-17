@@ -4,13 +4,14 @@ import SwiftUI
 /// is setting, and the editor behind updates as you tap, so the choice is
 /// previewed rather than committed blind.
 struct TileColorPicker: View {
+    @Environment(AppSettings.self) private var settings
     @Binding var selection: Int
     var onDelete: () -> Void
 
     @State private var isConfirmingDelete = false
 
     private var current: TileColor {
-        TilePalette.color(selection)
+        settings.color(selection)
     }
 
     var body: some View {
@@ -41,12 +42,12 @@ struct TileColorPicker: View {
                 Text("Delete tile")
                     .font(Typography.barLabel)
             }
-            .foregroundStyle(Theme.ink)
+            .foregroundStyle(current.ink)
             .frame(maxWidth: .infinity)
             .frame(height: 48)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Theme.ink.opacity(0.09))
+                    .fill(current.ink.opacity(0.09))
             )
         }
         .buttonStyle(.plain)
@@ -79,7 +80,7 @@ struct TileColorPicker: View {
 
     private var swatches: some View {
         HStack(spacing: 0) {
-            ForEach(TilePalette.all) { color in
+            ForEach(settings.colors) { color in
                 swatch(color)
             }
         }
@@ -96,15 +97,11 @@ struct TileColorPicker: View {
             shape
                 .fill(color.fill)
                 .frame(width: 40, height: 40)
-                .overlay {
-                    if let edge = color.edge {
-                        shape.strokeBorder(edge, lineWidth: 1)
-                    }
-                }
+                .overlay(shape.strokeBorder(color.edge, lineWidth: 1))
                 .background(shape.fill(color.shadow).offset(y: 2.5))
                 .overlay {
                     shape
-                        .strokeBorder(Theme.ink, lineWidth: 2.5)
+                        .strokeBorder(current.ink, lineWidth: 2.5)
                         .opacity(chosen ? 1 : 0)
                 }
                 .scaleEffect(chosen ? 1.1 : 1)

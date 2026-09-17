@@ -4,6 +4,7 @@ import UIKit
 /// A tile on the board, with its press, jiggle and delete affordances.
 struct BoardTile: View {
     let tile: Tile
+    let color: TileColor
     let index: Int
     let isEditing: Bool
     var onOpen: () -> Void
@@ -13,7 +14,7 @@ struct BoardTile: View {
     @State private var pressing = false
 
     var body: some View {
-        TileView(tile: tile)
+        TileView(tile: tile, color: color)
             // The badge is attached before the wobble so it swings with the
             // tile. Overlaying afterwards leaves it pinned outside the
             // rotation, drifting against the corner it belongs to.
@@ -37,10 +38,6 @@ struct BoardTile: View {
     /// the home screen leaves it, where only the badge deletes.
     private func onDelete_noop() {}
 
-    private var color: TileColor {
-        TilePalette.color(tile.colorIndex)
-    }
-
     /// Flat, and a step darker than the tile it sits on, so it belongs to the
     /// tile rather than being stuck onto it.
     @ViewBuilder
@@ -49,7 +46,7 @@ struct BoardTile: View {
             Button(action: onDelete) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .heavy))
-                    .foregroundStyle(TileInk.primary)
+                    .foregroundStyle(color.ink)
                     .frame(width: 27, height: 27)
                     .background(Circle().fill(color.shadow))
             }

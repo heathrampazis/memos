@@ -1,24 +1,21 @@
 import SwiftUI
 
-/// Colour tokens. Every colour in the app comes from here.
-///
-/// Static for now because there is one palette. When palettes become a user
-/// setting this becomes an @Observable instance in the environment, and the
-/// call sites do not change.
+/// Chrome colours. These are fixed rather than appearance-aware on purpose:
+/// dark mode darkens the board behind the tiles, it does not invert the panels
+/// over them. Anything that does change with appearance lives on AppSettings.
 enum Theme {
-    static let canvas = Color(light: 0xF1EDE4, dark: 0x14120F)
-    static let card = Color(light: 0xFFFFFF, dark: 0x201D18)
-    static let cardEdge = Color(light: 0xEDE8DC, dark: 0x2B2620)
-    static let cardShadow = Color(light: 0xE2DBCB, dark: 0x0C0B09)
+    static let canvas = Color(hex: 0xF1EDE4)
+    static let card = Color(hex: 0xFFFFFF)
+    static let cardEdge = Color(hex: 0xEDE8DC)
 
-    /// An empty slot on the board: a soft area waiting to be filled.
-    static let slotFill = Color(light: 0xF7F1E4, dark: 0x1B1814)
-    static let slotOutline = Color(light: 0xC7B99D, dark: 0x4C453B)
+    static let surface = Color(hex: 0xE9E3D7)
+    static let border = Color(hex: 0xDED7C8)
 
-    static let surface = Color(light: 0xE9E3D7, dark: 0x27231D)
-    static let border = Color(light: 0xDED7C8, dark: 0x332E27)
+    static let ink = Color(hex: 0x17120E)
+    static let muted = Color(hex: 0x7C736A)
+    static let faint = Color(hex: 0xA79E93)
 
-    static let ink = Color(light: 0x17120E, dark: 0xF5F0E6)
-    static let muted = Color(light: 0x7C736A, dark: 0x8C8378)
-    static let faint = Color(light: 0xA79E93, dark: 0x5E574E)
+    /// Warm rather than black. A neutral shadow on a cream ground goes grey
+    /// and reads as dirt instead of depth.
+    static let shadowTint = Color(hex: 0x2B1F12)
 }
