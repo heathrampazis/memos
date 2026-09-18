@@ -5,6 +5,7 @@ enum WidgetChoice: Hashable, Identifiable {
     case photo
     case drawing
     case voice
+    case code
     case panel(PanelKind)
 
     var id: String {
@@ -12,6 +13,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .photo: "photo"
         case .drawing: "drawing"
         case .voice: "voice"
+        case .code: "code"
         case .panel(let kind): "panel.\(kind.rawValue)"
         }
     }
@@ -21,6 +23,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .photo: "Photo"
         case .drawing: "Drawing"
         case .voice: "Voice memo"
+        case .code: "Code"
         case .panel(let kind): kind.label
         }
     }
@@ -30,6 +33,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .photo: "photo.fill"
         case .drawing: "scribble.variable"
         case .voice: "mic.fill"
+        case .code: "chevron.left.forwardslash.chevron.right"
         case .panel(let kind): kind.symbol
         }
     }
@@ -42,7 +46,7 @@ enum WidgetChoice: Hashable, Identifiable {
         }
     }
 
-    static let media: [WidgetChoice] = [.photo, .drawing, .voice]
+    static let blocks: [WidgetChoice] = [.photo, .drawing, .voice, .code]
     static let panels: [WidgetChoice] = PanelKind.allCases.map(WidgetChoice.panel)
 }
 
@@ -60,7 +64,7 @@ struct WidgetMenu: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
-            section("MEDIA", choices: WidgetChoice.media)
+            section("BLOCKS", choices: WidgetChoice.blocks)
             section("PANELS", choices: WidgetChoice.panels)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

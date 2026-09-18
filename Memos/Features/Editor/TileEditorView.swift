@@ -21,6 +21,7 @@ struct TileEditorView: View {
     @State private var isConfirmingWidget = false
     @State private var isInserting = false
     @State private var focusedPanel: UUID?
+    @State private var codeSession = CodeSession()
 
     /// Where a widget will land, taken the moment the (+) is pressed. Opening
     /// the menu puts the keyboard away, and by the time a kind is chosen the
@@ -88,7 +89,8 @@ struct TileEditorView: View {
                     mode: trayMode,
                     panelKind: focusedPanelKind,
                     onPanelKind: setPanelKind,
-                    onChoose: add
+                    onChoose: add,
+                    codeSession: codeSession
                 )
             }
         }
@@ -120,6 +122,11 @@ struct TileEditorView: View {
         // rearranged.
         .onChange(of: controller.isEditing) { _, editing in
             guard editing else { return }
+            stopEditingWidgets()
+            stopInserting()
+        }
+        .onChange(of: codeSession.activeID) { _, active in
+            guard active != nil else { return }
             stopEditingWidgets()
             stopInserting()
         }
@@ -185,6 +192,14 @@ struct TileEditorView: View {
                 PhotoWidget(photo: $segment.photo.required(), color: tileColor)
                     .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
+            } else if segment.code != nil {
+                CodeWidget(
+                    block: $segment.code.required(),
+                    color: tileColor,
+                    session: codeSession
+                )
+                .modifier(deletable(segment.id))
+                .padding(.vertical, 7)
             } else {
                 RichTextView(
                     segmentID: segment.id,
@@ -234,6 +249,7 @@ struct TileEditorView: View {
     /// is inside it — the run of text behind it just has not been told yet.
     private var trayMode: EditorTrayMode {
         if isInserting { return .insert }
+        if codeSession.activeID != nil { return .code }
         if focusedPanelKind != nil { return .panel }
         if titleFocused { return .title }
         if controller.isEditing { return .text }
@@ -283,6 +299,7 @@ struct TileEditorView: View {
         case .photo: addPhoto()
         case .drawing: addDrawing()
         case .voice: addAudioWidget()
+        case .code: addCode()
         case .panel(let kind): addPanel(kind)
         }
     }
@@ -307,6 +324,10 @@ struct TileEditorView: View {
 
     private func addPhoto() {
         insert(NoteSegment(photo: PhotoBlock(id: UUID())), thenType: false)
+    }
+
+    private func addCode() {
+        insert(NoteSegment(code: CodeBlock(id: UUID())), thenType: false)
     }
 
     /// The widget takes the caret's line as the place to break the note in two:
@@ -447,6 +468,7 @@ struct TileEditorView: View {
         if segment.clip != nil { return "voice memo" }
         if segment.drawing != nil { return "drawing" }
         if segment.photo != nil { return "photo" }
+        if segment.code != nil { return "code block" }
         return "panel"
     }
 
