@@ -3,10 +3,14 @@ import SwiftUI
 
 /// A callout sitting between two runs of text. It wears the same ground as the
 /// voice memo so the note reads as one object; the kind is carried by the rule
-/// and the header, which is enough to tell five of them apart at a glance.
+/// and the header, which is enough to tell them apart at a glance.
 struct PanelWidget: View {
     @Binding var panel: PanelBlock
     let color: TileColor
+
+    /// The tray shows this panel's kinds while its text has the caret, so it
+    /// has to be told when that starts and stops.
+    var onFocus: (Bool) -> Void
 
     @FocusState private var focused: Bool
 
@@ -44,6 +48,7 @@ struct PanelWidget: View {
                 .fill(color.ink.opacity(0.10))
         )
         .animation(.easeOut(duration: 0.18), value: panel.kind)
+        .onChange(of: focused) { _, isFocused in onFocus(isFocused) }
         // A panel is inserted empty, so the caret belongs in it straight away.
         .onAppear {
             guard panel.text.isEmpty else { return }

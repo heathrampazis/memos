@@ -19,6 +19,18 @@ struct TileEditorView: View {
     @State private var isEditingWidgets = false
     @State private var pendingWidget: UUID?
     @State private var isConfirmingWidget = false
+    @State private var isInserting = false
+    @State private var focusedPanel: UUID?
+
+    /// Where a widget will land, taken the moment the (+) is pressed. Opening
+    /// the menu puts the keyboard away, and by the time a kind is chosen the
+    /// text view can no longer say where the caret was.
+    @State private var insertionPoint: InsertionPoint?
+
+    private struct InsertionPoint: Equatable {
+        let segmentID: UUID
+        let location: Int
+    }
 
     var body: some View {
         // Title, text and widgets all live in one scroll, so a note with a
@@ -33,17 +45,6 @@ struct TileEditorView: View {
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .overlay(alignment: .bottomTrailing) {
-            AddWidgetButton(
-                color: tileColor,
-                onAudio: addAudioWidget,
-                onPanel: addPanel,
-                onDrawing: addDrawing,
-                onPhoto: addPhoto
-            )
-                .padding(.trailing, Spacing.screen)
-                .padding(.bottom, 16)
-        }
         .background(tileColor.fill)
         .background(SwipeBackEnabler().frame(width: 0, height: 0))
         // Nothing scrolled under the bar before, so it never left its scroll-edge
@@ -66,8 +67,30 @@ struct TileEditorView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            AddWidgetButton(color: tileColor, isOpen: isInserting) {
+                if isInserting {
+                    stopInserting()
+                } else {
+                    beginInserting()
+                }
+            }
+            .padding(.trailing, Spacing.screen)
+            .padding(.bottom, 16)
+        }
+        // Nothing to format means no bar: an empty strip claiming you are
+        // editing was the whole complaint about the old one.
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            FormatBar(controller: controller, color: tileColor)
+            if trayMode != .idle {
+                EditorTray(
+                    controller: controller,
+                    color: tileColor,
+                    mode: trayMode,
+                    panelKind: focusedPanelKind,
+                    onPanelKind: setPanelKind,
+                    onChoose: add
+                )
+            }
         }
         .sheet(isPresented: $isPickingColor) {
             TileColorPicker(selection: $tile.colorIndex) {
@@ -96,7 +119,9 @@ struct TileEditorView: View {
         // Typing again is the clearest sign the note is being written, not
         // rearranged.
         .onChange(of: controller.isEditing) { _, editing in
-            if editing { stopEditingWidgets() }
+            guard editing else { return }
+            stopEditingWidgets()
+            stopInserting()
         }
         .onChange(of: tile.title) { scheduleSave() }
         .onChange(of: tile.colorIndex) { tile.touch() }
@@ -147,8 +172,10 @@ struct TileEditorView: View {
                     .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
             } else if segment.panel != nil {
-                PanelWidget(panel: $segment.panel.required(), color: tileColor)
-                    .modifier(deletable(segment.id))
+                PanelWidget(panel: $segment.panel.required(), color: tileColor) { isFocused in
+                    trackPanelFocus(segment.id, isFocused)
+                }
+                .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
             } else if segment.drawing != nil {
                 DrawingWidget(block: $segment.drawing.required(), color: tileColor)
@@ -201,6 +228,65 @@ struct TileEditorView: View {
         settings.color(tile.colorIndex)
     }
 
+    // MARK: The tray
+
+    /// A panel's own text field wins over the note's, because the caret really
+    /// is inside it — the run of text behind it just has not been told yet.
+    private var trayMode: EditorTrayMode {
+        if isInserting { return .insert }
+        if focusedPanelKind != nil { return .panel }
+        if titleFocused { return .title }
+        if controller.isEditing { return .text }
+        return .idle
+    }
+
+    private var focusedPanelKind: PanelKind? {
+        guard let id = focusedPanel else { return nil }
+        return segments.first(where: { $0.id == id })?.panel?.kind
+    }
+
+    private func trackPanelFocus(_ id: UUID, _ isFocused: Bool) {
+        if isFocused {
+            focusedPanel = id
+        } else if focusedPanel == id {
+            focusedPanel = nil
+        }
+    }
+
+    private func setPanelKind(_ kind: PanelKind) {
+        guard let id = focusedPanel,
+              let index = segments.firstIndex(where: { $0.id == id })
+        else { return }
+        segments[index].panel?.kind = kind
+    }
+
+    private func beginInserting() {
+        // Captured before the keyboard goes, while the text view still knows
+        // where the caret is.
+        if controller.isEditing, let id = controller.activeID, let view = controller.textView {
+            insertionPoint = InsertionPoint(segmentID: id, location: view.selectedRange.location)
+        } else {
+            insertionPoint = nil
+        }
+        controller.endEditing()
+        stopEditingWidgets()
+        withAnimation(.easeOut(duration: 0.2)) { isInserting = true }
+    }
+
+    private func stopInserting() {
+        withAnimation(.easeOut(duration: 0.2)) { isInserting = false }
+    }
+
+    private func add(_ choice: WidgetChoice) {
+        stopInserting()
+        switch choice {
+        case .photo: addPhoto()
+        case .drawing: addDrawing()
+        case .voice: addAudioWidget()
+        case .panel(let kind): addPanel(kind)
+        }
+    }
+
     // MARK: Widgets
 
     private func addAudioWidget() {
@@ -227,9 +313,11 @@ struct TileEditorView: View {
     /// the text above stays in one run, the text below starts another, and the
     /// widget sits between them. With nothing focused it goes on the end.
     private func insert(_ widget: NoteSegment, thenType: Bool) {
-        guard let textView = controller.textView,
-              textView.isFirstResponder,
-              let index = segments.firstIndex(where: { $0.id == controller.activeID }),
+        let point = insertionPoint
+        insertionPoint = nil
+
+        guard let point,
+              let index = segments.firstIndex(where: { $0.id == point.segmentID }),
               segments[index].isText
         else {
             segments.append(widget)
@@ -240,7 +328,7 @@ struct TileEditorView: View {
 
         let full = segments[index].text
         let string = full.string as NSString
-        let caret = min(textView.selectedRange.location, full.length)
+        let caret = min(point.location, full.length)
         let cut = full.length == 0
             ? 0
             : NSMaxRange(string.paragraphRange(for: NSRange(location: caret, length: 0)))
