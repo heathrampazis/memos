@@ -8,30 +8,37 @@ enum DrawingTool: Equatable {
     case eraser
 }
 
-/// Holds the canvas and its history.
+/// A canvas that owns its undo stack.
 ///
-/// PencilKit has an undo manager of its own, but it belongs to the responder
-/// chain and a sheet's chain is not reliably ours. Keeping snapshots is a few
-/// lines, survives the eraser, and makes redo honest.
+/// PencilKit registers every stroke with whatever undo manager it finds on the
+/// responder chain, and inside a full-screen cover that is not reliably ours.
+/// Giving the canvas one of its own makes undo authoritative over PencilKit's
+/// own state — which a parallel stack of snapshots never was, however carefully
+/// it was kept: assigning `drawing` changed what you saw while PencilKit went
+/// on composing the next stroke against what it still believed was there.
+final class DrawingCanvasView: PKCanvasView {
+    let history = UndoManager()
+
+    override var undoManager: UndoManager? { history }
+}
+
 @Observable
 final class DrawingController {
     var tool: DrawingTool = .ink(.black)
 
     private(set) var canUndo = false
     private(set) var canRedo = false
-    private(set) var drawing: PKDrawing
 
-    @ObservationIgnored weak var canvas: PKCanvasView?
-
-    private var history: [PKDrawing]
-    private var index = 0
-    private var isRestoring = false
-
-    private static let historyLimit = 40
+    @ObservationIgnored weak var canvas: DrawingCanvasView?
+    @ObservationIgnored private let initial: PKDrawing
 
     init(drawing: PKDrawing) {
-        self.drawing = drawing
-        self.history = [drawing]
+        initial = drawing
+    }
+
+    /// The canvas is the only copy. Nothing is mirrored, so nothing can drift.
+    var drawing: PKDrawing {
+        canvas?.drawing ?? initial
     }
 
     var pkTool: PKTool {
@@ -47,54 +54,29 @@ final class DrawingController {
         tool == .eraser
     }
 
-    func record(_ drawing: PKDrawing) {
-        guard !isRestoring else { return }
-        self.drawing = drawing
-
-        // Anything ahead of here was undone. Drawing again is a new branch, so
-        // the old one goes.
-        if index + 1 < history.count {
-            history.removeSubrange((index + 1)...)
-        }
-        history.append(drawing)
-        if history.count > Self.historyLimit {
-            history.removeFirst()
-        }
-        index = history.count - 1
-        updateFlags()
-    }
-
     func undo() {
-        guard index > 0 else { return }
-        index -= 1
-        restore()
+        guard let history = canvas?.history, history.canUndo else { return }
+        history.undo()
+        refresh()
     }
 
     func redo() {
-        guard index + 1 < history.count else { return }
-        index += 1
-        restore()
+        guard let history = canvas?.history, history.canRedo else { return }
+        history.redo()
+        refresh()
     }
 
-    private func restore() {
-        isRestoring = true
-        drawing = history[index]
-        canvas?.drawing = drawing
-        isRestoring = false
-        updateFlags()
-    }
-
-    private func updateFlags() {
-        canUndo = index > 0
-        canRedo = index + 1 < history.count
+    func refresh() {
+        canUndo = canvas?.history.canUndo ?? false
+        canRedo = canvas?.history.canRedo ?? false
     }
 }
 
 struct DrawingCanvas: UIViewRepresentable {
     let controller: DrawingController
 
-    func makeUIView(context: Context) -> PKCanvasView {
-        let canvas = PKCanvasView()
+    func makeUIView(context: Context) -> DrawingCanvasView {
+        let canvas = DrawingCanvasView()
         canvas.delegate = context.coordinator
         // Finger drawing, not pencil only — this is a phone note, not an iPad.
         canvas.drawingPolicy = .anyInput
@@ -110,11 +92,16 @@ struct DrawingCanvas: UIViewRepresentable {
         canvas.drawing = controller.drawing
         canvas.tool = controller.pkTool
 
+        // Loading the existing sketch is not an edit, so undo must not walk back
+        // past it to an empty page.
+        canvas.history.removeAllActions()
+
         controller.canvas = canvas
+        controller.refresh()
         return canvas
     }
 
-    func updateUIView(_ canvas: PKCanvasView, context: Context) {
+    func updateUIView(_ canvas: DrawingCanvasView, context: Context) {
         canvas.tool = controller.pkTool
     }
 
@@ -130,7 +117,7 @@ struct DrawingCanvas: UIViewRepresentable {
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
-            controller.record(canvasView.drawing)
+            controller.refresh()
         }
     }
 }

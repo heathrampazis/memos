@@ -55,6 +55,7 @@ struct CodeEditorView: UIViewRepresentable {
                 length: 0
             )
             needsHighlight = true
+            context.coordinator.isStale = true
         }
 
         if context.coordinator.appliedLanguage != language {
@@ -71,8 +72,19 @@ struct CodeEditorView: UIViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: CodeTextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        let coordinator = context.coordinator
+
+        // Cached for the same reason the note's text runs are: a drag on a
+        // widget elsewhere re-measures everything, every frame.
+        if !coordinator.isStale, coordinator.measuredWidth == width {
+            return CGSize(width: width, height: coordinator.measuredHeight)
+        }
+
         let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: max(fitted.height, Spacing.minimumTextRun))
+        coordinator.measuredWidth = width
+        coordinator.measuredHeight = max(fitted.height, Spacing.minimumTextRun)
+        coordinator.isStale = false
+        return CGSize(width: width, height: coordinator.measuredHeight)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -83,12 +95,17 @@ struct CodeEditorView: UIViewRepresentable {
         var parent: CodeEditorView
         var appliedLanguage: CodeLanguage = .plain
 
+        var measuredWidth: CGFloat = 0
+        var measuredHeight: CGFloat = 0
+        var isStale = true
+
         init(_ parent: CodeEditorView) {
             self.parent = parent
         }
 
         func textViewDidChange(_ textView: UITextView) {
             parent.code = textView.text
+            isStale = true
 
             let selection = textView.selectedRange
             CodeSyntax.highlight(textView.textStorage, language: parent.language)
