@@ -16,11 +16,13 @@ enum Typography {
     static let sheetTitle = Font.system(size: 20, weight: .heavy)
     static let barLabel = Font.system(size: 13, weight: .bold)
 
+    /// The same ramp the editor uses, for widgets that render note text
+    /// themselves. Sizes come from TextLevel so the two cannot drift.
     static func block(_ level: TextLevel, bold: Bool) -> Font {
         switch level {
-        case .title: .system(size: 24, weight: .heavy)
-        case .heading: .system(size: 19, weight: bold ? .heavy : .bold)
-        case .body: .system(size: 16, weight: bold ? .bold : .regular)
+        case .title: .system(size: level.size, weight: bold ? .black : .heavy)
+        case .heading: .system(size: level.size, weight: bold ? .heavy : .bold)
+        case .body: .system(size: level.size, weight: bold ? .bold : .regular)
         }
     }
 }
