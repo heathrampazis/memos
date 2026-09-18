@@ -12,25 +12,55 @@ enum TextLevel: String, Codable, CaseIterable {
         }
     }
 
-    /// Titles and headings carry their weight here. That is not the same thing
-    /// as the author pressing bold, and the two must not be confused.
-    var baseFont: UIFont {
+    var size: CGFloat {
         switch self {
-        case .title: .systemFont(ofSize: 24, weight: .heavy)
-        case .heading: .systemFont(ofSize: 19, weight: .semibold)
-        case .body: .systemFont(ofSize: 16, weight: .regular)
+        case .title: 24
+        case .heading: 20
+        case .body: 16
         }
     }
 
+    /// Titles and headings carry their weight here. That is not the same thing
+    /// as the author pressing bold, and the two must not be confused.
+    var weight: UIFont.Weight {
+        switch self {
+        case .title: .heavy
+        case .heading: .bold
+        case .body: .regular
+        }
+    }
+
+    /// What pressing B gives this level.
+    ///
+    /// Each level steps up from its own base rather than having the bold trait
+    /// added, because a heading that is already bold cannot get any bolder that
+    /// way — which is the only reason headings used to be semibold.
+    var boldWeight: UIFont.Weight {
+        switch self {
+        case .title: .black
+        case .heading: .heavy
+        case .body: .bold
+        }
+    }
+
+    var baseFont: UIFont {
+        .systemFont(ofSize: size, weight: weight)
+    }
+
+    /// Space above separates a heading from whatever came before it; the much
+    /// smaller space below keeps it attached to what it introduces. A heading
+    /// floating equidistant between two paragraphs belongs to neither.
     var paragraphStyle: NSParagraphStyle {
         let style = NSMutableParagraphStyle()
         switch self {
         case .title:
-            style.paragraphSpacing = 6
-            style.paragraphSpacingBefore = 10
+            style.paragraphSpacingBefore = 20
+            style.paragraphSpacing = 8
+            style.lineSpacing = 1
         case .heading:
-            style.paragraphSpacing = 4
-            style.paragraphSpacingBefore = 12
+            style.paragraphSpacingBefore = 16
+            style.paragraphSpacing = 6
+            style.lineSpacing = 1
         case .body:
             style.lineSpacing = 4
             style.paragraphSpacing = 4
@@ -128,12 +158,14 @@ enum RichText {
     }
 
     static func font(level: TextLevel, bold: Bool, italic: Bool) -> UIFont {
-        let base = level.baseFont
-        var traits = base.fontDescriptor.symbolicTraits
+        // Bold is a weight, not a trait, so each level keeps its own ladder.
+        let base = UIFont.systemFont(
+            ofSize: level.size,
+            weight: bold ? level.boldWeight : level.weight
+        )
+        guard italic else { return base }
 
-        if bold { traits.insert(.traitBold) }
-        if italic { traits.insert(.traitItalic) } else { traits.remove(.traitItalic) }
-
+        let traits = base.fontDescriptor.symbolicTraits.union(.traitItalic)
         guard let descriptor = base.fontDescriptor.withSymbolicTraits(traits) else { return base }
         return UIFont(descriptor: descriptor, size: base.pointSize)
     }
