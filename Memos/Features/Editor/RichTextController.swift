@@ -46,14 +46,21 @@ final class RichTextController {
         guard let textView, !isStyling else { return }
         isEditing = textView.isFirstResponder
 
-        let attributes = attributesAtCaret(in: textView)
-        level = RichText.level(in: attributes)
-        isBold = RichText.isBold(in: attributes)
-        isItalic = RichText.isItalic(in: attributes)
-        isUnderlined = RichText.isUnderlined(in: attributes)
-        // A list belongs to the whole paragraph, so it is read from the start of
-        // one rather than from the character behind the caret.
-        list = RichText.list(in: paragraphAttributes(in: textView))
+        let inline = attributesAtCaret(in: textView)
+        let paragraph = paragraphAttributes(in: textView)
+
+        // Level, list and tick belong to the paragraph; bold, italic and
+        // underline belong to the characters.
+        //
+        // Reading the level from behind the caret meant that on an empty line
+        // it read the break that ended the paragraph above — which is how a
+        // quote's indent kept following the caret out of the quote.
+        level = RichText.level(in: paragraph)
+        list = RichText.list(in: paragraph)
+
+        isBold = RichText.isBold(in: inline)
+        isItalic = RichText.isItalic(in: inline)
+        isUnderlined = RichText.isUnderlined(in: inline)
 
         // Put the full set back. UIKit rebuilds typingAttributes from nearby
         // text whenever the caret moves and does not carry custom keys across,
@@ -64,7 +71,7 @@ final class RichTextController {
             italic: isItalic,
             underlined: isUnderlined,
             list: list,
-            checked: RichText.isChecked(in: attributes),
+            checked: RichText.isChecked(in: paragraph),
             ink: inkColor
         )
     }
@@ -98,6 +105,31 @@ final class RichTextController {
         return text.attributes(at: paragraph.location, effectiveRange: nil)
     }
 
+    /// A paragraph without the break that ends it.
+    ///
+    /// The break belongs to the paragraph it closes, but the empty line after
+    /// it takes its shape from whatever sits there — so a break wearing a level
+    /// hands that level to the next line. Styling stops short of it, and it is
+    /// set plain instead.
+    private func contentRange(of paragraph: NSRange, in string: NSString) -> NSRange {
+        guard paragraph.length > 0 else { return paragraph }
+
+        let last = NSMaxRange(paragraph) - 1
+        let character = string.substring(with: NSRange(location: last, length: 1))
+        guard character == "\n" || character == "\r" else { return paragraph }
+
+        return NSRange(location: paragraph.location, length: paragraph.length - 1)
+    }
+
+    /// Leaves a paragraph's closing break carrying nothing but body.
+    private func neutralise(_ paragraph: NSRange, content: NSRange, in text: NSMutableAttributedString) {
+        guard content.length < paragraph.length else { return }
+        text.setAttributes(
+            RichText.attributes(level: .body, ink: inkColor),
+            range: NSRange(location: NSMaxRange(content), length: paragraph.length - content.length)
+        )
+    }
+
     func activate(_ textView: UITextView, segmentID: UUID) {
         self.textView = textView
         activeID = segmentID
@@ -128,27 +160,33 @@ final class RichTextController {
     func apply(level newLevel: TextLevel) {
         style { textView in
             let text = NSMutableAttributedString(attributedString: textView.attributedText)
-            let paragraph = (text.string as NSString).paragraphRange(for: textView.selectedRange)
+            let string = text.string as NSString
+            let paragraph = string.paragraphRange(for: textView.selectedRange)
 
             // Titles and headings are not list items, so choosing one ends the
             // list the caret was in.
             let keptList = newLevel == .body ? list : nil
 
             if paragraph.length > 0 {
-                text.enumerateAttributes(in: paragraph, options: []) { attributes, range, _ in
-                    text.setAttributes(
-                        RichText.attributes(
-                            level: newLevel,
-                            bold: RichText.isBold(in: attributes),
-                            italic: RichText.isItalic(in: attributes),
-                            underlined: RichText.isUnderlined(in: attributes),
-                            list: keptList,
-                            checked: RichText.isChecked(in: attributes),
-                            ink: inkColor
-                        ),
-                        range: range
-                    )
+                let content = contentRange(of: paragraph, in: string)
+
+                if content.length > 0 {
+                    text.enumerateAttributes(in: content, options: []) { attributes, range, _ in
+                        text.setAttributes(
+                            RichText.attributes(
+                                level: newLevel,
+                                bold: RichText.isBold(in: attributes),
+                                italic: RichText.isItalic(in: attributes),
+                                underlined: RichText.isUnderlined(in: attributes),
+                                list: keptList,
+                                checked: RichText.isChecked(in: attributes),
+                                ink: inkColor
+                            ),
+                            range: range
+                        )
+                    }
                 }
+                neutralise(paragraph, content: content, in: text)
                 replace(textView, with: text)
             }
             level = newLevel
@@ -192,9 +230,9 @@ final class RichTextController {
         }
     }
 
-    /// An item with nothing typed into it yet. Return on one of these ends the
-    /// list instead of making another empty item.
-    func isListItemEmpty(in textView: UITextView) -> Bool {
+    /// A paragraph with nothing typed into it yet. Return on one of these ends
+    /// the list or the quote instead of making another empty one.
+    func isParagraphEmpty(in textView: UITextView) -> Bool {
         let string = (textView.text ?? "") as NSString
         let paragraph = string.paragraphRange(for: textView.selectedRange)
         guard paragraph.length > 0 else { return true }
@@ -202,6 +240,25 @@ final class RichTextController {
             .substring(with: paragraph)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty
+    }
+
+    /// The visual line the caret is on, which inside a quote is not the same
+    /// thing as its paragraph: a quote keeps all its lines in one paragraph so
+    /// they sit as close together as any others.
+    func isLineEmpty(in textView: UITextView) -> Bool {
+        let string = (textView.text ?? "") as NSString
+        var index = textView.selectedRange.location
+
+        // Walked back by hand rather than asked of lineRange, which misreports
+        // the empty line at the very end of a string that finishes with a
+        // break — which is exactly where the second return lands.
+        while index > 0 {
+            let character = string.substring(with: NSRange(location: index - 1, length: 1))
+            if character == "\u{2028}" || character == "\n" || character == "\r" { return true }
+            if !character.trimmingCharacters(in: .whitespaces).isEmpty { return false }
+            index -= 1
+        }
+        return true
     }
 
     /// True when the caret sits at the first character of its paragraph, which
@@ -215,20 +272,25 @@ final class RichTextController {
 
     private func setList(_ kind: TextListKind?, on paragraph: NSRange, in text: NSMutableAttributedString) {
         guard paragraph.length > 0 else { return }
-        text.enumerateAttributes(in: paragraph, options: []) { attributes, range, _ in
-            text.setAttributes(
-                RichText.attributes(
-                    level: kind == nil ? RichText.level(in: attributes) : .body,
-                    bold: RichText.isBold(in: attributes),
-                    italic: RichText.isItalic(in: attributes),
-                    underlined: RichText.isUnderlined(in: attributes),
-                    list: kind,
-                    checked: kind == .checklist && RichText.isChecked(in: attributes),
-                    ink: inkColor
-                ),
-                range: range
-            )
+        let content = contentRange(of: paragraph, in: text.string as NSString)
+
+        if content.length > 0 {
+            text.enumerateAttributes(in: content, options: []) { attributes, range, _ in
+                text.setAttributes(
+                    RichText.attributes(
+                        level: kind == nil ? RichText.level(in: attributes) : .body,
+                        bold: RichText.isBold(in: attributes),
+                        italic: RichText.isItalic(in: attributes),
+                        underlined: RichText.isUnderlined(in: attributes),
+                        list: kind,
+                        checked: kind == .checklist && RichText.isChecked(in: attributes),
+                        ink: inkColor
+                    ),
+                    range: range
+                )
+            }
         }
+        neutralise(paragraph, content: content, in: text)
     }
 
     func toggleBold() { setInline(bold: !isBold, italic: isItalic, underlined: isUnderlined) }

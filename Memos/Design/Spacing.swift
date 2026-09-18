@@ -17,6 +17,10 @@ enum Spacing {
     static let listMarkerGap: CGFloat = 8
     static let listIndent: CGFloat = 28
 
+    /// A quote's rule sits in the gutter before its text.
+    static let quoteIndent: CGFloat = 18
+    static let quoteRuleWidth: CGFloat = 3
+
     /// Breathing room under the last line. Keep this small: a large bottom
     /// inset gives the text view empty space to scroll into, which lets it
     /// push the caret to the top of the screen instead of keeping it low.

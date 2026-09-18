@@ -2,13 +2,18 @@ import SwiftUI
 import UIKit
 
 enum TextLevel: String, Codable, CaseIterable {
-    case title, heading, body
+    case title, heading, body, quote
+
+    /// The levels that appear as named pills. Quote gets a mark of its own —
+    /// a fourth pill does not fit the row, and the mark reads faster anyway.
+    static let named: [TextLevel] = [.title, .heading, .body]
 
     var label: String {
         switch self {
         case .title: "Title"
         case .heading: "Heading"
         case .body: "Body"
+        case .quote: "Quote"
         }
     }
 
@@ -16,7 +21,7 @@ enum TextLevel: String, Codable, CaseIterable {
         switch self {
         case .title: 24
         case .heading: 20
-        case .body: 16
+        case .body, .quote: 16
         }
     }
 
@@ -26,7 +31,7 @@ enum TextLevel: String, Codable, CaseIterable {
         switch self {
         case .title: .heavy
         case .heading: .bold
-        case .body: .regular
+        case .body, .quote: .regular
         }
     }
 
@@ -39,7 +44,7 @@ enum TextLevel: String, Codable, CaseIterable {
         switch self {
         case .title: .black
         case .heading: .heavy
-        case .body: .bold
+        case .body, .quote: .bold
         }
     }
 
@@ -64,6 +69,14 @@ enum TextLevel: String, Codable, CaseIterable {
         case .body:
             style.lineSpacing = 4
             style.paragraphSpacing = 4
+        case .quote:
+            // Indented clear of its rule, and given room either side so it
+            // reads as lifted out of the writing around it.
+            style.firstLineHeadIndent = Spacing.quoteIndent
+            style.headIndent = Spacing.quoteIndent
+            style.paragraphSpacingBefore = 10
+            style.paragraphSpacing = 10
+            style.lineSpacing = 4
         }
         return style
     }
@@ -127,7 +140,7 @@ enum RichText {
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font(level: level, bold: bold, italic: italic),
             .paragraphStyle: paragraphStyle(level: level, list: list),
-            .foregroundColor: ticked ? ink.withAlphaComponent(0.45) : ink,
+            .foregroundColor: tint(level: level, ticked: ticked, ink: ink),
             .memoLevel: level.rawValue,
             .memoBold: bold,
         ]
@@ -199,16 +212,27 @@ enum RichText {
         attributes[.memoChecked] as? Bool ?? false
     }
 
+    /// Ticked items are struck through and faded; a quote sits a shade back
+    /// from the writing around it. Everything else is full ink.
+    static func tint(level: TextLevel, ticked: Bool, ink: UIColor) -> UIColor {
+        if ticked { return ink.withAlphaComponent(0.45) }
+        return level == .quote ? ink.withAlphaComponent(0.72) : ink
+    }
+
     /// Repaints every run to the given ink, leaving structure untouched.
     static func repainted(_ text: NSAttributedString, ink: UIColor) -> NSAttributedString {
         guard text.length > 0 else { return text }
         let copy = NSMutableAttributedString(attributedString: text)
         let full = NSRange(location: 0, length: copy.length)
 
-        // Ticked items are dimmed, so repainting has to keep them dim rather
-        // than restoring them to full ink along with everything else.
+        // Ticked items and quotes are dimmed, so repainting has to keep them
+        // that way rather than restoring everything to full ink.
         copy.enumerateAttributes(in: full, options: []) { attributes, range, _ in
-            let value = isChecked(in: attributes) ? ink.withAlphaComponent(0.45) : ink
+            let value = tint(
+                level: level(in: attributes),
+                ticked: isChecked(in: attributes),
+                ink: ink
+            )
             copy.addAttribute(.foregroundColor, value: value, range: range)
         }
         return copy

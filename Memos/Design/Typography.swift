@@ -22,7 +22,7 @@ enum Typography {
         switch level {
         case .title: .system(size: level.size, weight: bold ? .black : .heavy)
         case .heading: .system(size: level.size, weight: bold ? .heavy : .bold)
-        case .body: .system(size: level.size, weight: bold ? .bold : .regular)
+        case .body, .quote: .system(size: level.size, weight: bold ? .bold : .regular)
         }
     }
 }
