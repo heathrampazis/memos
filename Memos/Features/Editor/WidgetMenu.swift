@@ -6,6 +6,7 @@ enum WidgetChoice: Hashable, Identifiable {
     case drawing
     case voice
     case code
+    case table
     case panel(PanelKind)
 
     var id: String {
@@ -14,6 +15,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .drawing: "drawing"
         case .voice: "voice"
         case .code: "code"
+        case .table: "table"
         case .panel(let kind): "panel.\(kind.rawValue)"
         }
     }
@@ -24,6 +26,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .drawing: "Drawing"
         case .voice: "Voice memo"
         case .code: "Code"
+        case .table: "Table"
         case .panel(let kind): kind.label
         }
     }
@@ -34,6 +37,7 @@ enum WidgetChoice: Hashable, Identifiable {
         case .drawing: "scribble.variable"
         case .voice: "mic.fill"
         case .code: "chevron.left.forwardslash.chevron.right"
+        case .table: "tablecells.fill"
         case .panel(let kind): kind.symbol
         }
     }
@@ -46,7 +50,7 @@ enum WidgetChoice: Hashable, Identifiable {
         }
     }
 
-    static let blocks: [WidgetChoice] = [.photo, .drawing, .voice, .code]
+    static let blocks: [WidgetChoice] = [.photo, .drawing, .voice, .code, .table]
     static let panels: [WidgetChoice] = PanelKind.allCases.map(WidgetChoice.panel)
 }
 
