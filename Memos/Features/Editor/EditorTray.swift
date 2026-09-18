@@ -7,6 +7,7 @@ enum EditorTrayMode: Equatable {
     case title
     case text
     case panel
+    case code
     case insert
 }
 
@@ -23,6 +24,7 @@ struct EditorTray: View {
     let panelKind: PanelKind?
     var onPanelKind: (PanelKind) -> Void
     var onChoose: (WidgetChoice) -> Void
+    let codeSession: CodeSession
 
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -42,6 +44,8 @@ struct EditorTray: View {
                 inlineRow
             case .panel:
                 panelRow
+            case .code:
+                codeRows
             case .title, .idle:
                 inlineRow
             }
@@ -94,6 +98,97 @@ struct EditorTray: View {
             dismissButton
         }
         .frame(height: 40)
+    }
+
+    /// The keys a software keyboard buries three taps deep, which is most of
+    /// what writing code on a phone actually costs.
+    private static let symbols = [
+        "{", "}", "(", ")", "[", "]", "<", ">", "\"", "'", "=", ";", ":",
+        ".", ",", "_", "-", "+", "*", "/", "|", "&", "#", "$", "!", "?",
+    ]
+
+    private var codeRows: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            if let token = codeSession.commentToken {
+                commentKey(token)
+            }
+            symbolRow
+        }
+    }
+
+    /// Commenting a line out is the one code action that is a whole thought
+    /// rather than a character, so it gets a labelled button of its own.
+    private func commentKey(_ token: String) -> some View {
+        Button {
+            codeSession.toggleComment()
+        } label: {
+            HStack(spacing: 6) {
+                Text(token)
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                Text("Comment")
+                    .font(Typography.barLabel)
+            }
+            .foregroundStyle(color.ink)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(Capsule().fill(color.ink.opacity(0.10)))
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var symbolRow: some View {
+        HStack(spacing: 6) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    indentKey("arrow.left.to.line", label: "Outdent") { codeSession.outdent() }
+                    indentKey("arrow.right.to.line", label: "Indent") { codeSession.indent() }
+
+                    ForEach(Self.symbols, id: \.self) { symbol in
+                        symbolKey(symbol)
+                    }
+                }
+                .padding(.trailing, 4)
+            }
+
+            dismissButton
+        }
+        .frame(height: 40)
+    }
+
+    private func indentKey(
+        _ symbol: String,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(color.ink)
+                .frame(width: 44, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(color.ink.opacity(0.09))
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private func symbolKey(_ symbol: String) -> some View {
+        Button {
+            codeSession.insert(symbol)
+        } label: {
+            Text(symbol)
+                .font(.system(size: 16, weight: .semibold, design: .monospaced))
+                .foregroundStyle(color.ink)
+                .frame(width: 36, height: 38)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(color.ink.opacity(0.09))
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var panelRow: some View {
