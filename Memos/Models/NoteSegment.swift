@@ -13,6 +13,7 @@ struct NoteSegment: Identifiable, Equatable {
     var photo: PhotoBlock?
     var code: CodeBlock?
     var table: TableBlock?
+    var link: LinkBlock?
 
     init(id: UUID = UUID(), text: NSAttributedString = NSAttributedString()) {
         self.id = id
@@ -55,9 +56,15 @@ struct NoteSegment: Identifiable, Equatable {
         self.table = table
     }
 
+    init(id: UUID = UUID(), link: LinkBlock) {
+        self.id = id
+        self.text = NSAttributedString()
+        self.link = link
+    }
+
     var isText: Bool {
         clip == nil && panel == nil && drawing == nil
-            && photo == nil && code == nil && table == nil
+            && photo == nil && code == nil && table == nil && link == nil
     }
 
     /// A widget nothing has been put into yet. Backspace may take one of these;
@@ -69,6 +76,7 @@ struct NoteSegment: Identifiable, Equatable {
         if let photo = photo { return photo.isEmpty }
         if let code = code { return code.isEmpty }
         if let table = table { return table.isEmpty }
+        if let link = link { return link.isEmpty }
         return false
     }
 }
@@ -107,6 +115,7 @@ enum NoteCodec {
         var photo: PhotoBlock?
     var code: CodeBlock?
     var table: TableBlock?
+    var link: LinkBlock?
     }
 
     static func encode(_ segments: [NoteSegment]) -> Data {
@@ -129,6 +138,9 @@ enum NoteCodec {
             if let table = segment.table {
                 return Entry(table: table)
             }
+            if let link = segment.link {
+                return Entry(link: link)
+            }
             return Entry(text: RichText.archive(segment.text))
         }
         return (try? JSONEncoder().encode(entries)) ?? Data()
@@ -148,6 +160,7 @@ enum NoteCodec {
             if let photo = entry.photo { return NoteSegment(photo: photo) }
             if let code = entry.code { return NoteSegment(code: code) }
             if let table = entry.table { return NoteSegment(table: table) }
+            if let link = entry.link { return NoteSegment(link: link) }
             return NoteSegment(text: RichText.restore(entry.text ?? Data()))
         }
         return segments.isEmpty ? [NoteSegment()] : segments
@@ -170,6 +183,9 @@ enum NoteCodec {
                 }
                 if let photo = segment.photo {
                     return photo.isEmpty ? nil : "\u{25A3} Photo"
+                }
+                if let link = segment.link {
+                    return link.isEmpty ? nil : "\u{2197} " + link.displayTitle
                 }
                 if let table = segment.table {
                     return table.summary.map { "\u{25A6} " + $0 }

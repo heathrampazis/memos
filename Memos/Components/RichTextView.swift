@@ -13,6 +13,10 @@ struct RichTextView: UIViewRepresentable {
     /// Backspace at the very start. Returns true when the editor handled it.
     var onBackspaceAtStart: () -> Bool
 
+    /// A word was just finished, which is when a URL on its own line becomes a
+    /// bookmark.
+    var onWordCommitted: () -> Void
+
     func makeUIView(context: Context) -> EditorTextView {
         let view = EditorTextView()
         let coordinator = context.coordinator
@@ -27,6 +31,9 @@ struct RichTextView: UIViewRepresentable {
         view.typingAttributes = RichText.attributes(level: .body, ink: controller.inkColor)
         view.inkColor = controller.inkColor
         view.fillColor = controller.fillColor
+        view.onWordCommitted = { [weak coordinator] in
+            coordinator?.parent.onWordCommitted()
+        }
         view.onDeleteBackwardAtStart = { [weak coordinator] in
             coordinator?.parent.onBackspaceAtStart() ?? false
         }
