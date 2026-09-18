@@ -2,13 +2,10 @@ import Foundation
 import SwiftData
 
 enum ModelContainerFactory {
-    /// The schema is still changing shape. A model change that lightweight
-    /// migration cannot handle would otherwise leave the app running against
-    /// no store at all, which looks like the app is broken. In debug builds
-    /// the store is discarded and rebuilt instead.
-    ///
-    /// Remove this once the schema settles and replace it with a versioned
-    /// migration plan — at that point losing data silently is the wrong answer.
+    // The schema is still changing shape, so in debug builds a store that cannot
+    // be migrated is discarded and rebuilt rather than leaving the app running
+    // against nothing. Replace this with a versioned migration plan before real
+    // notes depend on it — losing data silently is the wrong answer by then.
     static func make() -> ModelContainer {
         let schema = Schema([Tile.self])
         let configuration = ModelConfiguration(schema: schema)
@@ -30,8 +27,7 @@ enum ModelContainerFactory {
         }
     }
 
-    /// SQLite keeps a write-ahead log and shared memory file beside the store.
-    /// Leaving those behind makes the rebuilt store fail too.
+    // SQLite keeps a write-ahead log and shared memory file beside the store.
     private static func deleteStore(at url: URL) {
         let directory = url.deletingLastPathComponent()
         let name = url.lastPathComponent

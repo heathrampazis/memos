@@ -20,8 +20,7 @@ enum Appearance: String, CaseIterable, Identifiable, Codable {
     }
 }
 
-/// App-level preferences. These are settings rather than content, so they live
-/// in UserDefaults and never touch the SwiftData schema.
+// App-level preferences.
 @Observable
 final class AppSettings {
     var palette: TilePaletteKind {

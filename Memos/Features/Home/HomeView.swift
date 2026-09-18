@@ -75,9 +75,7 @@ struct HomeView: View {
         .padding(.bottom, 18)
     }
 
-    /// The board is fixed: eight places, always on one screen. Rows share the
-    /// height that is left rather than each tile having a set size, so the
-    /// grid fits every device without scrolling.
+    // The board is fixed: eight places, always on one screen.
     private var board: some View {
         VStack(spacing: Spacing.gridGap) {
             ForEach(rows.indices, id: \.self) { index in
@@ -175,7 +173,7 @@ struct HomeView: View {
         }
     }
 
-    /// Real tiles first, then empty places up to the board's capacity.
+    // Real tiles first, then empty places up to the board's capacity.
     private var slots: [Slot] {
         var slots = tiles.prefix(Tile.boardCapacity).enumerated().map { Slot.tile($1, $0) }
         for index in slots.count..<Tile.boardCapacity {

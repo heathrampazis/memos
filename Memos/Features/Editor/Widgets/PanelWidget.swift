@@ -1,15 +1,13 @@
 import Foundation
 import SwiftUI
 
-/// A callout sitting between two runs of text. It wears the same ground as the
-/// voice memo so the note reads as one object; the kind is carried by the rule
-/// and the header, which is enough to tell them apart at a glance.
+// A callout sitting between two runs of text.
 struct PanelWidget: View {
     @Binding var panel: PanelBlock
     let color: TileColor
 
-    /// The tray shows this panel's kinds while its text has the caret, so it
-    /// has to be told when that starts and stops.
+    // The tray shows this panel's kinds while its text has the caret, so it has to be told when
+    // that starts and stops.
     var onFocus: (Bool) -> Void
 
     @FocusState private var focused: Bool
@@ -88,8 +86,8 @@ struct PanelWidget: View {
 }
 
 extension Binding where Value == PanelBlock? {
-    /// ForEach hands back a binding to the whole segment; the card only wants
-    /// the panel, and it is only ever built when one is there.
+    // ForEach hands back a binding to the whole segment; the card only wants the panel, and it
+    // is only ever built when one is there.
     func required() -> Binding<PanelBlock> {
         Binding<PanelBlock>(
             get: { self.wrappedValue ?? PanelBlock(id: UUID()) },

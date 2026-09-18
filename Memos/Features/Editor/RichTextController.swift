@@ -2,18 +2,16 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// Owns the text view and every edit made to it. The format bar talks to this
-/// rather than to the text, so styling runs through UIKit where the caret,
-/// selection and typing attributes already live.
+// Owns the text view and every edit made to it.
 @Observable
 final class RichTextController {
     weak var textView: UITextView?
 
-    /// Text colour for the tile this editor is showing.
+    // Text colour for the tile this editor is showing.
     var inkColor: UIColor = UIColor(Theme.ink)
 
-    /// The tile's own colour, used for whatever is drawn on top of ink — the
-    /// tick inside a filled checkbox.
+    // The tile's own colour, used for whatever is drawn on top of ink — the tick inside a
+    // filled checkbox.
     var fillColor: UIColor = .white
 
     private(set) var level: TextLevel = .body
@@ -23,12 +21,10 @@ final class RichTextController {
     private(set) var isEditing = false
     private(set) var list: TextListKind?
 
-    /// Which run of the note holds the caret. The note is several text views
-    /// now, so "the text view" is whichever one is being typed in.
+    // Which run of the note holds the caret.
     private(set) var activeID: UUID?
 
-    /// Asks a particular run to take the caret. Set by the editor after it
-    /// splits or joins runs; the run itself clears it once it has obeyed.
+    // Asks a particular run to take the caret.
     var focusRequest: FocusRequest?
 
     struct FocusRequest: Equatable {
@@ -36,8 +32,8 @@ final class RichTextController {
         let location: Int
     }
 
-    /// While we are rewriting attributes ourselves, the caret moves and UIKit
-    /// reports changes we would otherwise read back and undo.
+    // While we are rewriting attributes ourselves, the caret moves and UIKit reports changes we
+    // would otherwise read back and undo.
     private var isStyling = false
 
     // MARK: Reading the caret
@@ -76,8 +72,7 @@ final class RichTextController {
         )
     }
 
-    /// The text is the source of truth, not typingAttributes. The character
-    /// behind the caret is what the next one will look like.
+    // The text is the source of truth, not typingAttributes.
     private func attributesAtCaret(in textView: UITextView) -> [NSAttributedString.Key: Any] {
         let text = textView.attributedText ?? NSAttributedString()
         let range = textView.selectedRange
@@ -94,8 +89,7 @@ final class RichTextController {
         return textView.typingAttributes
     }
 
-    /// The attributes of the caret's paragraph. An empty paragraph carries no
-    /// characters to hold them, so what the caret is about to type stands in.
+    // The attributes of the caret's paragraph.
     private func paragraphAttributes(in textView: UITextView) -> [NSAttributedString.Key: Any] {
         let text = textView.attributedText ?? NSAttributedString()
         let paragraph = (text.string as NSString).paragraphRange(for: textView.selectedRange)
@@ -105,12 +99,7 @@ final class RichTextController {
         return text.attributes(at: paragraph.location, effectiveRange: nil)
     }
 
-    /// A paragraph without the break that ends it.
-    ///
-    /// The break belongs to the paragraph it closes, but the empty line after
-    /// it takes its shape from whatever sits there — so a break wearing a level
-    /// hands that level to the next line. Styling stops short of it, and it is
-    /// set plain instead.
+    // A paragraph without the break that ends it.
     private func contentRange(of paragraph: NSRange, in string: NSString) -> NSRange {
         guard paragraph.length > 0 else { return paragraph }
 
@@ -121,7 +110,7 @@ final class RichTextController {
         return NSRange(location: paragraph.location, length: paragraph.length - 1)
     }
 
-    /// Leaves a paragraph's closing break carrying nothing but body.
+    // Leaves a paragraph's closing break carrying nothing but body.
     private func neutralise(_ paragraph: NSRange, content: NSRange, in text: NSMutableAttributedString) {
         guard content.length < paragraph.length else { return }
         text.setAttributes(
@@ -136,9 +125,8 @@ final class RichTextController {
         syncState()
     }
 
-    /// Ignored unless this really is the run that was active — otherwise moving
-    /// the caret from one run to the next would read as editing having stopped,
-    /// and the format bar would blink.
+    // Ignored unless this really is the run that was active — otherwise moving the caret from
+    // one run to the next would read as editing having stopped, and the format bar would blink.
     func deactivate(_ textView: UITextView) {
         guard self.textView === textView else { return }
         isEditing = false
@@ -155,8 +143,7 @@ final class RichTextController {
 
     // MARK: Editing
 
-    /// Levels apply to whole paragraphs, the way they read. Bold, italic and
-    /// underline carry across unchanged.
+    // Levels apply to whole paragraphs, the way they read.
     func apply(level newLevel: TextLevel) {
         style { textView in
             let text = NSMutableAttributedString(attributedString: textView.attributedText)
@@ -194,8 +181,7 @@ final class RichTextController {
         }
     }
 
-    /// Lists apply to whole paragraphs. Tapping the kind a paragraph already is
-    /// turns it back into plain text, so each button is its own switch.
+    // Lists apply to whole paragraphs.
     func toggle(list kind: TextListKind) {
         let newList: TextListKind? = list == kind ? nil : kind
 
@@ -218,7 +204,7 @@ final class RichTextController {
         }
     }
 
-    /// Takes the caret's paragraph out of its list, leaving the text alone.
+    // Takes the caret's paragraph out of its list, leaving the text alone.
     func clearList() {
         style { textView in
             let text = NSMutableAttributedString(attributedString: textView.attributedText)
@@ -230,8 +216,7 @@ final class RichTextController {
         }
     }
 
-    /// A paragraph with nothing typed into it yet. Return on one of these ends
-    /// the list or the quote instead of making another empty one.
+    // A paragraph with nothing typed into it yet.
     func isParagraphEmpty(in textView: UITextView) -> Bool {
         let string = (textView.text ?? "") as NSString
         let paragraph = string.paragraphRange(for: textView.selectedRange)
@@ -242,9 +227,9 @@ final class RichTextController {
             .isEmpty
     }
 
-    /// The visual line the caret is on, which inside a quote is not the same
-    /// thing as its paragraph: a quote keeps all its lines in one paragraph so
-    /// they sit as close together as any others.
+    // The visual line the caret is on, which inside a quote is not the same thing as its
+    // paragraph: a quote keeps all its lines in one paragraph so they sit as close together as
+    // any others.
     func isLineEmpty(in textView: UITextView) -> Bool {
         let string = (textView.text ?? "") as NSString
         var index = textView.selectedRange.location
@@ -261,8 +246,8 @@ final class RichTextController {
         return true
     }
 
-    /// True when the caret sits at the first character of its paragraph, which
-    /// is where backspace means "stop being a list item".
+    // True when the caret sits at the first character of its paragraph, which is where
+    // backspace means "stop being a list item".
     func isAtParagraphStart(in textView: UITextView) -> Bool {
         let string = (textView.text ?? "") as NSString
         let selection = textView.selectedRange
@@ -326,8 +311,7 @@ final class RichTextController {
         }
     }
 
-    /// Runs an edit with read-back suppressed, then writes the resulting
-    /// typing attributes once.
+    // Runs an edit with read-back suppressed, then writes the resulting typing attributes once.
     private func style(_ edit: (UITextView) -> Void) {
         guard let textView else { return }
         isStyling = true
@@ -346,7 +330,7 @@ final class RichTextController {
         textView.setNeedsDisplay()
     }
 
-    /// Replacing the whole string resets the caret, so it is put back.
+    // Replacing the whole string resets the caret, so it is put back.
     private func replace(_ textView: UITextView, with text: NSAttributedString) {
         let selection = textView.selectedRange
         textView.attributedText = text

@@ -3,28 +3,24 @@ import SwiftData
 
 @Model
 final class Tile {
-    /// The board is a fixed eight tiles.
+    // The board is a fixed eight tiles.
     static let boardCapacity = 8
 
     var title: String
 
-    /// The note body: an ordered list of text runs and widgets, encoded by
-    /// NoteCodec. Older tiles hold a bare archived string and still decode.
+    // The note body: an ordered list of text runs and widgets, encoded by TileCodec.
     var bodyData: Data
 
-    /// Plain-text mirror, kept in step on save. Tile previews and, later,
-    /// search read this rather than unarchiving the body.
+    // Plain-text mirror, kept in step on save.
     var plainText: String
 
-    /// Which slot in the active palette this tile uses. The palette itself is
-    /// an app setting, so the same index recolours when the palette changes.
+    // Which slot in the active palette this tile uses.
     var colorIndex: Int
 
     var createdAt: Date
     var updatedAt: Date
 
-    /// Fixed at creation. Generating this during rendering makes tiles
-    /// re-tilt on every redraw.
+    // Fixed at creation.
     var tilt: Double
 
     init(title: String = "") {

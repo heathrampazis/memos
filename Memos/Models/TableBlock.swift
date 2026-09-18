@@ -1,7 +1,6 @@
 import Foundation
 
-/// Which cell has the caret. The tray's row and column controls all act
-/// relative to it, so it is the one thing the editor has to know about a table.
+// Which cell has the caret.
 struct TableCell: Hashable, Codable {
     var row: Int
     var column: Int
@@ -12,8 +11,7 @@ enum TableAction {
     case addColumn, deleteColumn, moveColumnLeft, moveColumnRight
 }
 
-/// A table in a note. Row zero is the header and stays there — a table whose
-/// header can be dragged into the middle is a spreadsheet, and this is not one.
+// A table in a note.
 struct TableBlock: Equatable, Codable {
     var id: UUID
     var cells: [[String]]
@@ -35,7 +33,7 @@ struct TableBlock: Equatable, Codable {
         }
     }
 
-    /// The header, for the board preview.
+    // The header, for the board preview.
     var summary: String? {
         guard let header = cells.first else { return nil }
         let titles = header
@@ -58,7 +56,7 @@ struct TableBlock: Equatable, Codable {
         }
     }
 
-    /// The header and one body row are the least that still reads as a table.
+    // The header and one body row are the least that still reads as a table.
     mutating func removeRow(_ index: Int) {
         guard rowCount > 2, cells.indices.contains(index), index > 0 else { return }
         cells.remove(at: index)
@@ -71,7 +69,7 @@ struct TableBlock: Equatable, Codable {
         }
     }
 
-    /// Body rows only, and never past the header.
+    // Body rows only, and never past the header.
     mutating func moveRow(_ index: Int, by offset: Int) {
         let destination = index + offset
         guard index > 0, destination > 0,

@@ -3,8 +3,8 @@ import SwiftUI
 import UIKit
 import PencilKit
 
-/// The sketch as it sits in the note: a preview you tap to edit, and a handle
-/// under it to set how much of the note it takes up.
+// The sketch as it sits in the note: a preview you tap to edit, and a handle under it to set
+// how much of the note it takes up.
 struct DrawingWidget: View {
     @Binding var block: DrawingBlock
     let color: TileColor
@@ -13,9 +13,7 @@ struct DrawingWidget: View {
     @State private var isEditing = false
     @State private var heightAtStart: Double?
 
-    /// The height while a drag is in flight. Writing every frame through the
-    /// binding would re-render every other run in the note and restart the
-    /// save timer on each one, which is what made resizing stutter.
+    // The height while a drag is in flight.
     @State private var dragHeight: Double?
 
     var body: some View {
@@ -67,8 +65,8 @@ struct DrawingWidget: View {
         .buttonStyle(.plain)
     }
 
-    /// Dragged rather than dialled: the right size is whatever looks right next
-    /// to the text above it, which is not a number anyone would type.
+    // Dragged rather than dialled: the right size is whatever looks right next to the text
+    // above it, which is not a number anyone would type.
     private var handle: some View {
         Capsule()
             .fill(color.ink.opacity(0.22))

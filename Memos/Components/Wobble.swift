@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The home-screen jiggle. Each tile is given a slightly different period so
-/// the board does not move in lockstep, which reads as mechanical.
+// The home-screen jiggle.
 struct Wobble: ViewModifier {
     let active: Bool
     let seed: Int

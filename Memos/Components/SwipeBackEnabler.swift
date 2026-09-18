@@ -1,13 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Restores going back by swiping, and widens it.
-///
-/// Two gestures are involved. The system's edge-pan is re-enabled — hiding the
-/// back button switches it off — which keeps the interactive transition where
-/// the board follows your thumb. On top of that a pan is added across the whole
-/// screen, so a swipe that starts anywhere goes back too. The wide one is not
-/// interactive; it recognises the gesture on release and pops normally.
+// Restores going back by swiping, and widens it.
 struct SwipeBackEnabler: UIViewControllerRepresentable {
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -60,8 +54,8 @@ struct SwipeBackEnabler: UIViewControllerRepresentable {
             canGoBack
         }
 
-        /// The wide pan has to share with the text view, or scrolling and
-        /// selecting text stop working.
+        // The wide pan has to share with the text view, or scrolling and selecting text stop
+        // working.
         func gestureRecognizer(
             _ recognizer: UIGestureRecognizer,
             shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer

@@ -2,11 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// A snippet in a note.
-///
-/// The one widget that does not wear the tile's colours. Syntax highlighting
-/// that has to stay readable on five different tile palettes ends up readable
-/// on none, so the block is a fixed dark ground and the colours are chosen once.
+// A snippet in a note.
 struct CodeWidget: View {
     @Binding var block: CodeBlock
     let color: TileColor

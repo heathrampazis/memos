@@ -2,11 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// Which code block has the caret, so the tray can type into it.
-///
-/// The symbol row needs to reach the text view being edited, and the tray has
-/// no way to know which card that is — the card tells this, and the tray asks
-/// it. All the behaviour lives in the text view; this only forwards.
+// Which code block has the caret, so the tray can type into it.
 @Observable
 final class CodeSession {
     private(set) var activeID: UUID?
@@ -20,8 +16,8 @@ final class CodeSession {
         language = textView.language
     }
 
-    /// The kind can change under the caret from the card's own menu, and the
-    /// tray's comment button has to follow it.
+    // The kind can change under the caret from the card's own menu, and the tray's comment
+    // button has to follow it.
     func refresh(_ textView: CodeTextView) {
         guard self.textView === textView else { return }
         language = textView.language
@@ -37,8 +33,8 @@ final class CodeSession {
         return textView
     }
 
-    /// Goes through insertText, so a bracket typed from the row auto-closes
-    /// exactly as one typed on the keyboard does.
+    // Goes through insertText, so a bracket typed from the row auto-closes exactly as one typed
+    // on the keyboard does.
     func insert(_ text: String) { active?.insertText(text) }
 
     func indent() { active?.indentLine() }

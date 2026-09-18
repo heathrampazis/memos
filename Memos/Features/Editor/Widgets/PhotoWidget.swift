@@ -3,9 +3,7 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-/// A picture, as wide as the note allows and no wider. There is nothing to
-/// resize: a photo has a shape of its own, and letting it be scrubbed smaller
-/// only produces notes full of postage stamps.
+// A picture, as wide as the note allows and no wider.
 struct PhotoWidget: View {
     @Binding var photo: PhotoBlock
     let color: TileColor

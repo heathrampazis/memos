@@ -2,12 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// The editable part of a code block.
-///
-/// Every iOS writing convenience is turned off here — autocorrect, smart
-/// quotes, capitalisation. They are the single biggest reason typing code on a
-/// phone is miserable, and a curly quote in a string is a bug you cannot see.
-/// The typing behaviour itself lives in CodeTextView.
+// The editable part of a code block.
 struct CodeEditorView: UIViewRepresentable {
     let blockID: UUID
     @Binding var code: String

@@ -1,13 +1,7 @@
 import Foundation
 import UIKit
 
-/// Colouring for a snippet, not a compiler.
-///
-/// Highlighting is a handful of regular expressions run in order, with strings
-/// and comments applied last so they win over anything matched inside them.
-/// That is wrong in the corners a real parser would get right — a keyword
-/// inside an identifier-ish position, say — and completely fine for the twenty
-/// lines anybody pastes into a note.
+// Colouring for a snippet, not a compiler.
 enum CodeSyntax {
     // A block dark enough to be unmistakably code, and fixed rather than tinted
     // per tile: syntax colours that have to work on five tile palettes end up
@@ -40,8 +34,7 @@ enum CodeSyntax {
         [.font: font, .foregroundColor: plain, .paragraphStyle: paragraphStyle]
     }
 
-    /// Repaints in place. Only colours change, so the caret and the text itself
-    /// are untouched.
+    // Repaints in place.
     static func highlight(_ storage: NSTextStorage, language: CodeLanguage) {
         let full = NSRange(location: 0, length: storage.length)
         guard full.length > 0 else { return }
@@ -69,9 +62,7 @@ enum CodeSyntax {
         let group: Int
     }
 
-    /// Built once per language. Highlighting runs on every keystroke and only
-    /// ever from the main thread, so an unguarded cache is both safe and the
-    /// difference between compiling eight expressions per character and none.
+    // Built once per language.
     private nonisolated(unsafe) static var compiled: [String: [CompiledRule]] = [:]
 
     private static func compiledRules(for language: CodeLanguage) -> [CompiledRule] {
@@ -98,9 +89,8 @@ enum CodeSyntax {
         }
     }
 
-    /// Order is the whole trick: later rules paint over earlier ones, so
-    /// strings and comments come last and a keyword inside a string stays a
-    /// string.
+    // Order is the whole trick: later rules paint over earlier ones, so strings and comments
+    // come last and a keyword inside a string stays a string.
     private static func rules(for language: CodeLanguage) -> [Rule] {
         switch language {
         case .plain:

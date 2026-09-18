@@ -1,8 +1,7 @@
 import Foundation
 import UIKit
 
-/// Thumbnails for bookmarks. Same arrangement as photos, at a fraction of the
-/// size — a card shows it at 46 points and nothing will ever show it bigger.
+// Thumbnails for bookmarks.
 enum LinkStore {
     static let maximumEdge: CGFloat = 320
 
@@ -32,13 +31,6 @@ enum LinkStore {
 
     static func delete(_ id: UUID) {
         try? FileManager.default.removeItem(at: url(for: id))
-    }
-
-    static func deleteAll(in segments: [NoteSegment]) {
-        for segment in segments {
-            guard let link = segment.link else { continue }
-            delete(link.id)
-        }
     }
 
     private static func downscaled(_ image: UIImage) -> UIImage {

@@ -1,18 +1,16 @@
 import Foundation
 import SwiftUI
 
-/// A sketch in a note. The strokes live in their own file — a drawing is far
-/// bigger than the rest of a note put together — so the block only carries what
-/// the card needs to lay itself out.
+// A sketch in a note.
 struct DrawingBlock: Equatable, Codable {
     var id: UUID
 
-    /// How tall the card sits in the note, dragged by the handle beneath it.
+    // How tall the card sits in the note, dragged by the handle beneath it.
     var height: Double = 200
 
     var isEmpty: Bool = true
 
-    /// Bumped on every save. The card watches it to know its preview is stale.
+    // Bumped on every save.
     var revision: Int = 0
 
     static let minimumHeight: Double = 120

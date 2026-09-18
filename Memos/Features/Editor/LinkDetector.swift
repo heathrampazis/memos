@@ -1,16 +1,12 @@
 import Foundation
 
-/// Finds a URL that is sitting alone on its own line.
-///
-/// Only alone, deliberately. A link inside a sentence stays text, because
-/// turning that into a card would split the sentence in two and leave the
-/// reader with two fragments and a bookmark between them.
+// Finds a URL that is sitting alone on its own line.
 enum LinkDetector {
     private static let detector = try? NSDataDetector(
         types: NSTextCheckingResult.CheckingType.link.rawValue
     )
 
-    /// The paragraph to replace, and what it points at.
+    // The paragraph to replace, and what it points at.
     static func standaloneLink(in text: NSString, near caret: Int) -> (range: NSRange, url: URL)? {
         guard text.length > 0 else { return nil }
 

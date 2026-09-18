@@ -26,13 +26,13 @@ struct TileColor: Identifiable, Hashable {
     let id: Int
     let name: String
     let fill: Color
-    /// The delete badge and other pressed-in surfaces.
+    // The delete badge and other pressed-in surfaces.
     let shadow: Color
-    /// Trays and sheets over the tile: a step away from the page so they read
-    /// as chrome without bringing in a colour from somewhere else.
+    // Trays and sheets over the tile: a step away from the page so they read as chrome without
+    // bringing in a colour from somewhere else.
     let tray: Color
     let edge: Color
-    /// Text on this tile.
+    // Text on this tile.
     let ink: Color
 
     var inkSecondary: Color { ink.opacity(0.74) }
@@ -54,9 +54,7 @@ enum TilePalettes {
         return all.indices.contains(index) ? all[index] : all[0]
     }
 
-    /// Every fill stays light enough to carry ink text. Earlier versions of the
-    /// neutral ramps ran too dark at the end, which is what made secondary and
-    /// placeholder text disappear on the last few tiles.
+    // Every fill stays light enough to carry ink text.
     private static func fills(for kind: TilePaletteKind) -> [UInt32] {
         switch kind {
         case .colour:

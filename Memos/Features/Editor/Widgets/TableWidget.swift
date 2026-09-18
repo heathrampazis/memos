@@ -1,11 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// A table in a note.
-///
-/// Columns share the width evenly while they fit and hold a minimum once they
-/// do not, so a two-column table fills the note and a seven-column one scrolls
-/// sideways rather than squeezing every cell into nothing.
+// A table in a note.
 struct TableWidget: View {
     @Binding var block: TableBlock
     @Binding var focus: TableCell?
@@ -103,8 +99,8 @@ struct TableWidget: View {
             }
     }
 
-    /// A cell on the edge of the table follows the table's own corner, so the
-    /// outline curves with it instead of being cut square across it.
+    // A cell on the edge of the table follows the table's own corner, so the outline curves
+    // with it instead of being cut square across it.
     private func cornerShape(row: Int, column: Int) -> UnevenRoundedRectangle {
         let radius: CGFloat = 15
         let lastRow = block.rowCount - 1
@@ -119,8 +115,8 @@ struct TableWidget: View {
         )
     }
 
-    /// Bounds-checked: a binding outlives the row or column it points at by a
-    /// frame or two whenever one is deleted.
+    // Bounds-checked: a binding outlives the row or column it points at by a frame or two
+    // whenever one is deleted.
     private func text(_ row: Int, _ column: Int) -> Binding<String> {
         Binding(
             get: {

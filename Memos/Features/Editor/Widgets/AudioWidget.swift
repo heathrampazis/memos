@@ -1,9 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// A voice memo, sitting between two runs of text in the note's scroll. It is a
-/// real view rather than a character in the text, so it can hold its own
-/// controls and its own state without the editor knowing anything about audio.
+// A voice memo, sitting between two runs of text in the note's scroll.
 struct AudioWidget: View {
     @Binding var clip: AudioClip
     let color: TileColor
@@ -145,8 +143,8 @@ struct AudioWidget: View {
 }
 
 extension Binding where Value == AudioClip? {
-    /// ForEach hands back a binding to the whole segment; the card only wants
-    /// the clip, and it is only ever built when one is there.
+    // ForEach hands back a binding to the whole segment; the card only wants the clip, and it
+    // is only ever built when one is there.
     func required() -> Binding<AudioClip> {
         Binding<AudioClip>(
             get: { self.wrappedValue ?? AudioClip(id: UUID()) },

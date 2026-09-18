@@ -1,12 +1,10 @@
 import Foundation
 
-/// Meter readings taken while recording, reduced to the handful of bars the
-/// card actually draws. Kept apart from the view so the recorder can thin a
-/// finished take without knowing anything about SwiftUI.
+// Meter readings taken while recording, reduced to the handful of bars the card actually draws.
 enum AudioSamples {
     static let barCount = 34
 
-    /// Averages the trace down to one value per bar.
+    // Averages the trace down to one value per bar.
     static func thinned(_ samples: [Float]) -> [Float] {
         guard samples.count > barCount else { return samples }
         let width = Double(samples.count) / Double(barCount)
@@ -18,8 +16,8 @@ enum AudioSamples {
         }
     }
 
-    /// The tail of a recording in progress, padded so the bars fill in from the
-    /// right rather than stretching to fit.
+    // The tail of a recording in progress, padded so the bars fill in from the right rather
+    // than stretching to fit.
     static func live(_ samples: [Float]) -> [Float] {
         let tail = Array(samples.suffix(barCount))
         guard tail.count < barCount else { return tail }

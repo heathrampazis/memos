@@ -8,8 +8,7 @@ final class AudioRecorder {
     private(set) var level: Float = 0
     private(set) var permissionDenied = false
 
-    /// The live meter trace. Kept at full rate while recording so the bars move
-    /// with the voice, then thinned down to one value per bar on stop.
+    // The live meter trace.
     private(set) var samples: [Float] = []
 
     private var recorder: AVAudioRecorder?
@@ -63,7 +62,7 @@ final class AudioRecorder {
         }
     }
 
-    /// Returns the finished clip, or nil when nothing usable was captured.
+    // Returns the finished clip, or nil when nothing usable was captured.
     func stop(id: UUID, name: String) -> AudioClip? {
         ticker?.invalidate()
         ticker = nil

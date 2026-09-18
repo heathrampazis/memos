@@ -10,7 +10,7 @@ extension Color {
         )
     }
 
-    /// Resolves per appearance, so a single token works in both themes.
+    // Resolves per appearance, so a single token works in both themes.
     init(light: UInt32, dark: UInt32) {
         self.init(UIColor { trait in
             UIColor(Color(hex: trait.userInterfaceStyle == .dark ? dark : light))
