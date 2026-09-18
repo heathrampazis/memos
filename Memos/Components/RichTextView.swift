@@ -55,6 +55,7 @@ struct RichTextView: UIViewRepresentable {
                 location: min(selection.location, view.attributedText.length),
                 length: 0
             )
+            context.coordinator.isStale = true
         }
 
         guard controller.focusRequest?.segmentID == segmentID else { return }
@@ -74,8 +75,21 @@ struct RichTextView: UIViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: EditorTextView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        let coordinator = context.coordinator
+
+        // Laying the run out again is the expensive part, and a widget elsewhere
+        // in the note changing height asks every run to measure on every frame
+        // of the drag. Nothing about this run has changed, so the last answer
+        // still holds.
+        if !coordinator.isStale, coordinator.measuredWidth == width {
+            return CGSize(width: width, height: coordinator.measuredHeight)
+        }
+
         let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: max(fitted.height, Spacing.minimumTextRun))
+        coordinator.measuredWidth = width
+        coordinator.measuredHeight = max(fitted.height, Spacing.minimumTextRun)
+        coordinator.isStale = false
+        return CGSize(width: width, height: coordinator.measuredHeight)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -85,12 +99,23 @@ struct RichTextView: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: RichTextView
 
+        var measuredWidth: CGFloat = 0
+        var measuredHeight: CGFloat = 0
+        var isStale = true
+
         init(_ parent: RichTextView) {
             self.parent = parent
         }
 
-        func textViewDidChange(_ textView: UITextView) {
+        /// Everything that changes the text goes through here, so the cached
+        /// height is invalidated in exactly one place.
+        func publish(_ textView: UITextView) {
             parent.text = textView.attributedText
+            isStale = true
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            publish(textView)
             parent.controller.syncState()
             // Markers are painted on, so they are only right once the text they
             // sit beside has been laid out again.
@@ -153,7 +178,7 @@ struct RichTextView: UIViewRepresentable {
             storage.endEditing()
 
             textView.selectedRange = NSRange(location: range.location + 1, length: 0)
-            parent.text = textView.attributedText
+            publish(textView)
             textView.setNeedsDisplay()
 
             // Moving the caret makes UITextView rebuild typingAttributes, which

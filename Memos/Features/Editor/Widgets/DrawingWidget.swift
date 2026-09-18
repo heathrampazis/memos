@@ -13,10 +13,15 @@ struct DrawingWidget: View {
     @State private var isEditing = false
     @State private var heightAtStart: Double?
 
+    /// The height while a drag is in flight. Writing every frame through the
+    /// binding would re-render every other run in the note and restart the
+    /// save timer on each one, which is what made resizing stutter.
+    @State private var dragHeight: Double?
+
     var body: some View {
         VStack(spacing: 0) {
             canvas
-                .frame(height: block.height)
+                .frame(height: dragHeight ?? block.height)
             handle
         }
         .frame(maxWidth: .infinity)
@@ -77,12 +82,16 @@ struct DrawingWidget: View {
                     .onChanged { value in
                         let base = heightAtStart ?? block.height
                         heightAtStart = base
-                        block.height = min(
+                        dragHeight = min(
                             max(base + value.translation.height, DrawingBlock.minimumHeight),
                             DrawingBlock.maximumHeight
                         )
                     }
-                    .onEnded { _ in heightAtStart = nil }
+                    .onEnded { _ in
+                        if let dragHeight { block.height = dragHeight }
+                        heightAtStart = nil
+                        dragHeight = nil
+                    }
             )
             .accessibilityLabel("Resize drawing")
     }
