@@ -8,6 +8,7 @@ enum EditorTrayMode: Equatable {
     case text
     case panel
     case code
+    case table
     case insert
 }
 
@@ -25,6 +26,7 @@ struct EditorTray: View {
     var onPanelKind: (PanelKind) -> Void
     var onChoose: (WidgetChoice) -> Void
     let codeSession: CodeSession
+    var onTable: (TableAction) -> Void
 
     private var shape: UnevenRoundedRectangle {
         UnevenRoundedRectangle(
@@ -46,6 +48,8 @@ struct EditorTray: View {
                 panelRow
             case .code:
                 codeRows
+            case .table:
+                tableRows
             case .title, .idle:
                 inlineRow
             }
@@ -106,6 +110,70 @@ struct EditorTray: View {
         "{", "}", "(", ")", "[", "]", "<", ">", "\"", "'", "=", ";", ":",
         ".", ",", "_", "-", "+", "*", "/", "|", "&", "#", "$", "!", "?",
     ]
+
+    /// Rows and columns get a line each. Each button carries the band it acts
+    /// on, so it says "add a row" or "move this column left" on its own — no
+    /// labels, and no guessing which line is which.
+    private var tableRows: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 5) {
+                tableKey(.row, "plus", .addRow)
+                tableKey(.row, "arrow.up", .moveRowUp)
+                tableKey(.row, "arrow.down", .moveRowDown)
+                tableKey(.row, "minus", .deleteRow)
+                Spacer(minLength: 0)
+                dismissButton
+            }
+            .frame(height: 38)
+
+            HStack(spacing: 5) {
+                tableKey(.column, "plus", .addColumn)
+                tableKey(.column, "arrow.left", .moveColumnLeft)
+                tableKey(.column, "arrow.right", .moveColumnRight)
+                tableKey(.column, "minus", .deleteColumn)
+                Spacer(minLength: 0)
+            }
+            .frame(height: 38)
+        }
+    }
+
+    private func tableKey(
+        _ axis: TableBandGlyph.Axis,
+        _ symbol: String,
+        _ action: TableAction
+    ) -> some View {
+        Button {
+            onTable(action)
+        } label: {
+            HStack(spacing: 4) {
+                TableBandGlyph(axis: axis, tint: color.ink)
+                Image(systemName: symbol)
+                    .font(.system(size: 10, weight: .black))
+            }
+            .foregroundStyle(color.ink)
+            .padding(.horizontal, 9)
+            .frame(height: 34)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(color.ink.opacity(0.09))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label(for: action))
+    }
+
+    private func label(for action: TableAction) -> String {
+        switch action {
+        case .addRow: "Add row"
+        case .deleteRow: "Delete row"
+        case .moveRowUp: "Move row up"
+        case .moveRowDown: "Move row down"
+        case .addColumn: "Add column"
+        case .deleteColumn: "Delete column"
+        case .moveColumnLeft: "Move column left"
+        case .moveColumnRight: "Move column right"
+        }
+    }
 
     private var codeRows: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -273,5 +341,41 @@ struct EditorTray: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Three bands with the middle one solid: stacked for a row, side by side for a
+/// column. Small enough to sit beside an action symbol and still say which axis
+/// the button belongs to.
+struct TableBandGlyph: View {
+    enum Axis {
+        case row, column
+    }
+
+    let axis: Axis
+    let tint: Color
+
+    var body: some View {
+        Group {
+            switch axis {
+            case .row:
+                VStack(spacing: 1.5) { bands }
+            case .column:
+                HStack(spacing: 1.5) { bands }
+            }
+        }
+        .frame(width: 14, height: 14)
+    }
+
+    @ViewBuilder
+    private var bands: some View {
+        band(0.3)
+        band(1)
+        band(0.3)
+    }
+
+    private func band(_ opacity: Double) -> some View {
+        RoundedRectangle(cornerRadius: 1, style: .continuous)
+            .fill(tint.opacity(opacity))
     }
 }

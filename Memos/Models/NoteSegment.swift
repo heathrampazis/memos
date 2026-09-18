@@ -12,6 +12,7 @@ struct NoteSegment: Identifiable, Equatable {
     var drawing: DrawingBlock?
     var photo: PhotoBlock?
     var code: CodeBlock?
+    var table: TableBlock?
 
     init(id: UUID = UUID(), text: NSAttributedString = NSAttributedString()) {
         self.id = id
@@ -48,8 +49,15 @@ struct NoteSegment: Identifiable, Equatable {
         self.code = code
     }
 
+    init(id: UUID = UUID(), table: TableBlock) {
+        self.id = id
+        self.text = NSAttributedString()
+        self.table = table
+    }
+
     var isText: Bool {
-        clip == nil && panel == nil && drawing == nil && photo == nil && code == nil
+        clip == nil && panel == nil && drawing == nil
+            && photo == nil && code == nil && table == nil
     }
 
     /// A widget nothing has been put into yet. Backspace may take one of these;
@@ -60,6 +68,7 @@ struct NoteSegment: Identifiable, Equatable {
         if let drawing = drawing { return drawing.isEmpty }
         if let photo = photo { return photo.isEmpty }
         if let code = code { return code.isEmpty }
+        if let table = table { return table.isEmpty }
         return false
     }
 }
@@ -97,6 +106,7 @@ enum NoteCodec {
         var drawing: DrawingBlock?
         var photo: PhotoBlock?
     var code: CodeBlock?
+    var table: TableBlock?
     }
 
     static func encode(_ segments: [NoteSegment]) -> Data {
@@ -116,6 +126,9 @@ enum NoteCodec {
             if let code = segment.code {
                 return Entry(code: code)
             }
+            if let table = segment.table {
+                return Entry(table: table)
+            }
             return Entry(text: RichText.archive(segment.text))
         }
         return (try? JSONEncoder().encode(entries)) ?? Data()
@@ -134,6 +147,7 @@ enum NoteCodec {
             if let drawing = entry.drawing { return NoteSegment(drawing: drawing) }
             if let photo = entry.photo { return NoteSegment(photo: photo) }
             if let code = entry.code { return NoteSegment(code: code) }
+            if let table = entry.table { return NoteSegment(table: table) }
             return NoteSegment(text: RichText.restore(entry.text ?? Data()))
         }
         return segments.isEmpty ? [NoteSegment()] : segments
@@ -156,6 +170,9 @@ enum NoteCodec {
                 }
                 if let photo = segment.photo {
                     return photo.isEmpty ? nil : "\u{25A3} Photo"
+                }
+                if let table = segment.table {
+                    return table.summary.map { "\u{25A6} " + $0 }
                 }
                 if let code = segment.code {
                     // The first line of a snippet says more than the word

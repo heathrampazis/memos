@@ -22,6 +22,12 @@ struct TileEditorView: View {
     @State private var isInserting = false
     @State private var focusedPanel: UUID?
     @State private var codeSession = CodeSession()
+    @State private var focusedTable: TableFocus?
+
+    private struct TableFocus: Equatable {
+        let id: UUID
+        var cell: TableCell
+    }
 
     /// Where a widget will land, taken the moment the (+) is pressed. Opening
     /// the menu puts the keyboard away, and by the time a kind is chosen the
@@ -90,7 +96,8 @@ struct TileEditorView: View {
                     panelKind: focusedPanelKind,
                     onPanelKind: setPanelKind,
                     onChoose: add,
-                    codeSession: codeSession
+                    codeSession: codeSession,
+                    onTable: applyTable
                 )
             }
         }
@@ -126,6 +133,11 @@ struct TileEditorView: View {
             stopInserting()
         }
         .onChange(of: codeSession.activeID) { _, active in
+            guard active != nil else { return }
+            stopEditingWidgets()
+            stopInserting()
+        }
+        .onChange(of: focusedTable) { _, active in
             guard active != nil else { return }
             stopEditingWidgets()
             stopInserting()
@@ -192,6 +204,14 @@ struct TileEditorView: View {
                 PhotoWidget(photo: $segment.photo.required(), color: tileColor)
                     .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
+            } else if segment.table != nil {
+                TableWidget(
+                    block: $segment.table.required(),
+                    focus: tableFocus(for: segment.id),
+                    color: tileColor
+                )
+                .modifier(deletable(segment.id))
+                .padding(.vertical, 7)
             } else if segment.code != nil {
                 CodeWidget(
                     block: $segment.code.required(),
@@ -250,6 +270,7 @@ struct TileEditorView: View {
     private var trayMode: EditorTrayMode {
         if isInserting { return .insert }
         if codeSession.activeID != nil { return .code }
+        if focusedTable != nil { return .table }
         if focusedPanelKind != nil { return .panel }
         if titleFocused { return .title }
         if controller.isEditing { return .text }
@@ -267,6 +288,64 @@ struct TileEditorView: View {
         } else if focusedPanel == id {
             focusedPanel = nil
         }
+    }
+
+    /// One table is focused at a time, so the editor keeps the cell rather than
+    /// each card keeping its own and the tray having to ask around.
+    private func tableFocus(for id: UUID) -> Binding<TableCell?> {
+        Binding(
+            get: { focusedTable?.id == id ? focusedTable?.cell : nil },
+            set: { cell in
+                if let cell {
+                    focusedTable = TableFocus(id: id, cell: cell)
+                } else if focusedTable?.id == id {
+                    focusedTable = nil
+                }
+            }
+        )
+    }
+
+    /// Every action is relative to the focused cell, and a move takes the caret
+    /// with it so the same row can be nudged twice without hunting for it.
+    private func applyTable(_ action: TableAction) {
+        guard let focus = focusedTable,
+              let index = segments.firstIndex(where: { $0.id == focus.id }),
+              var table = segments[index].table
+        else { return }
+
+        var cell = focus.cell
+
+        switch action {
+        case .addRow:
+            table.addRow(after: cell.row)
+            cell.row = min(cell.row + 1, table.rowCount - 1)
+        case .deleteRow:
+            table.removeRow(cell.row)
+            cell.row = min(cell.row, table.rowCount - 1)
+        case .moveRowUp:
+            table.moveRow(cell.row, by: -1)
+            cell.row = max(1, cell.row - 1)
+        case .moveRowDown:
+            table.moveRow(cell.row, by: 1)
+            cell.row = min(cell.row + 1, table.rowCount - 1)
+        case .addColumn:
+            table.addColumn(after: cell.column)
+            cell.column = min(cell.column + 1, table.columnCount - 1)
+        case .deleteColumn:
+            table.removeColumn(cell.column)
+            cell.column = min(cell.column, table.columnCount - 1)
+        case .moveColumnLeft:
+            table.moveColumn(cell.column, by: -1)
+            cell.column = max(0, cell.column - 1)
+        case .moveColumnRight:
+            table.moveColumn(cell.column, by: 1)
+            cell.column = min(cell.column + 1, table.columnCount - 1)
+        }
+
+        withAnimation(.easeOut(duration: 0.16)) {
+            segments[index].table = table
+        }
+        focusedTable = TableFocus(id: focus.id, cell: cell)
     }
 
     private func setPanelKind(_ kind: PanelKind) {
@@ -300,6 +379,7 @@ struct TileEditorView: View {
         case .drawing: addDrawing()
         case .voice: addAudioWidget()
         case .code: addCode()
+        case .table: addTable()
         case .panel(let kind): addPanel(kind)
         }
     }
@@ -328,6 +408,10 @@ struct TileEditorView: View {
 
     private func addCode() {
         insert(NoteSegment(code: CodeBlock(id: UUID())), thenType: false)
+    }
+
+    private func addTable() {
+        insert(NoteSegment(table: TableBlock(id: UUID())), thenType: false)
     }
 
     /// The widget takes the caret's line as the place to break the note in two:
@@ -469,6 +553,7 @@ struct TileEditorView: View {
         if segment.drawing != nil { return "drawing" }
         if segment.photo != nil { return "photo" }
         if segment.code != nil { return "code block" }
+        if segment.table != nil { return "table" }
         return "panel"
     }
 
