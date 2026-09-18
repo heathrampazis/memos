@@ -137,7 +137,7 @@ struct TileEditorView: View {
             stopEditingWidgets()
             stopInserting()
         }
-        .onChange(of: focusedTable) { _, active in
+        .onChange(of: activeTable) { _, active in
             guard active != nil else { return }
             stopEditingWidgets()
             stopInserting()
@@ -270,7 +270,7 @@ struct TileEditorView: View {
     private var trayMode: EditorTrayMode {
         if isInserting { return .insert }
         if codeSession.activeID != nil { return .code }
-        if focusedTable != nil { return .table }
+        if activeTable != nil { return .table }
         if focusedPanelKind != nil { return .panel }
         if titleFocused { return .title }
         if controller.isEditing { return .text }
@@ -288,6 +288,18 @@ struct TileEditorView: View {
         } else if focusedPanel == id {
             focusedPanel = nil
         }
+    }
+
+    /// A table that is still in the note.
+    ///
+    /// The card owns the focus state, so it goes away with the card and never
+    /// reports the blur. Without this the tray would go on offering row and
+    /// column controls for a table that had been deleted.
+    private var activeTable: TableFocus? {
+        guard let focus = focusedTable,
+              segments.contains(where: { $0.id == focus.id && $0.table != nil })
+        else { return nil }
+        return focus
     }
 
     /// One table is focused at a time, so the editor keeps the cell rather than
@@ -308,7 +320,7 @@ struct TileEditorView: View {
     /// Every action is relative to the focused cell, and a move takes the caret
     /// with it so the same row can be nudged twice without hunting for it.
     private func applyTable(_ action: TableAction) {
-        guard let focus = focusedTable,
+        guard let focus = activeTable,
               let index = segments.firstIndex(where: { $0.id == focus.id }),
               var table = segments[index].table
         else { return }
@@ -455,6 +467,7 @@ struct TileEditorView: View {
         if let clip = segments[index].clip { AudioStore.delete(clip.id) }
         if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
         if let photo = segments[index].photo { PhotoStore.delete(photo.id) }
+        if focusedTable?.id == id { focusedTable = nil }
         withAnimation(.spring(response: 0.34, dampingFraction: 0.8)) {
             segments.remove(at: index)
         }
@@ -482,6 +495,7 @@ struct TileEditorView: View {
             if let clip = previous.clip { AudioStore.delete(clip.id) }
             if let drawing = previous.drawing { DrawingStore.delete(drawing.id) }
             if let photo = previous.photo { PhotoStore.delete(photo.id) }
+            if focusedTable?.id == previous.id { focusedTable = nil }
             segments.remove(at: index - 1)
         }
 
