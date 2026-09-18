@@ -73,7 +73,7 @@ struct EditorTray: View {
     /// Paragraph shape, on its own line the way it reads.
     private var levelRow: some View {
         HStack(spacing: 7) {
-            ForEach(TextLevel.allCases, id: \.self) { level in
+            ForEach(TextLevel.named, id: \.self) { level in
                 levelPill(level)
             }
             Spacer(minLength: 0)
@@ -87,6 +87,10 @@ struct EditorTray: View {
                 iconToggle("bold", isOn: controller.isBold) { controller.toggleBold() }
                 iconToggle("italic", isOn: controller.isItalic) { controller.toggleItalic() }
                 iconToggle("underline", isOn: controller.isUnderlined) { controller.toggleUnderline() }
+                iconToggle("quote.opening", isOn: controller.level == .quote) {
+                    controller.apply(level: controller.level == .quote ? .body : .quote)
+                }
+                .accessibilityLabel("Quote")
 
                 divider
 
@@ -322,7 +326,7 @@ struct EditorTray: View {
             Image(systemName: "keyboard.chevron.compact.down")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(color.ink.opacity(0.55))
-                .frame(width: 42, height: 40)
+                .frame(width: 40, height: 40)
         }
         .buttonStyle(.plain)
         .opacity(mode == .idle ? 0 : 1)
@@ -334,7 +338,7 @@ struct EditorTray: View {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(isOn ? color.fill : color.ink)
-                .frame(width: 40, height: 38)
+                .frame(width: 36, height: 38)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .fill(isOn ? color.ink : Color.clear)

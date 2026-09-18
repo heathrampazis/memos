@@ -87,10 +87,72 @@ final class EditorTextView: UITextView {
         super.draw(rect)
 
         let text = attributedText ?? NSAttributedString()
+        let paragraphs = paragraphRanges(in: text.string as NSString)
+        let attributes = paragraphs.map { markerAttributes(for: $0, in: text) }
+
+        drawQuoteRules(paragraphs, attributes)
+        drawListMarkers(paragraphs, attributes)
+    }
+
+    /// One unbroken rule per quote.
+    ///
+    /// Return keeps you inside a quote, so a long one is several paragraphs —
+    /// and a stack of short rules with gaps between them reads as several
+    /// quotes rather than one.
+    private func drawQuoteRules(
+        _ paragraphs: [NSRange],
+        _ attributes: [[NSAttributedString.Key: Any]]
+    ) {
+        var index = 0
+        while index < paragraphs.count {
+            guard RichText.level(in: attributes[index]) == .quote else {
+                index += 1
+                continue
+            }
+
+            var last = index
+            while last + 1 < paragraphs.count,
+                  RichText.level(in: attributes[last + 1]) == .quote {
+                last += 1
+            }
+
+            if let rule = ruleRect(from: paragraphs[index], to: paragraphs[last]) {
+                inkColor.withAlphaComponent(0.3).setFill()
+                UIBezierPath(roundedRect: rule, cornerRadius: rule.width / 2).fill()
+            }
+            index = last + 1
+        }
+    }
+
+    private func ruleRect(from first: NSRange, to last: NSRange) -> CGRect? {
+        let end = max(last.location, NSMaxRange(last) - 1)
+        guard let start = position(from: beginningOfDocument, offset: first.location),
+              let finish = position(from: beginningOfDocument, offset: end)
+        else { return nil }
+
+        let top = caretRect(for: start)
+        let bottom = caretRect(for: finish)
+        guard top.isFinite, !top.isNull, bottom.isFinite, !bottom.isNull else { return nil }
+
+        let minY = min(top.minY, bottom.minY)
+        let maxY = max(top.maxY, bottom.maxY)
+        guard maxY > minY else { return nil }
+
+        return CGRect(
+            x: textContainerInset.left,
+            y: minY,
+            width: Spacing.quoteRuleWidth,
+            height: maxY - minY
+        )
+    }
+
+    private func drawListMarkers(
+        _ paragraphs: [NSRange],
+        _ attributes: [[NSAttributedString.Key: Any]]
+    ) {
         var number = 0
 
-        for paragraph in paragraphRanges(in: text.string as NSString) {
-            let attributes = markerAttributes(for: paragraph, in: text)
+        for (paragraph, attributes) in zip(paragraphs, attributes) {
             guard let kind = RichText.list(in: attributes) else {
                 number = 0
                 continue

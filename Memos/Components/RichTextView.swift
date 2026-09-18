@@ -41,9 +41,19 @@ struct RichTextView: UIViewRepresentable {
             guard let controller = coordinator?.parent.controller, let view else { return false }
             // Backspace at the head of a list item takes it out of the list
             // before it starts eating the line above.
-            guard controller.list != nil, controller.isAtParagraphStart(in: view) else { return false }
-            controller.clearList()
-            return true
+            guard controller.isAtParagraphStart(in: view) else { return false }
+
+            if controller.list != nil {
+                controller.clearList()
+                return true
+            }
+            // Backspace at the head of a quote leaves the quote before it
+            // starts eating the line above.
+            if controller.level == .quote {
+                controller.apply(level: .body)
+                return true
+            }
+            return false
         }
         return view
     }
@@ -147,7 +157,7 @@ struct RichTextView: UIViewRepresentable {
             if controller.list != nil {
                 // Return on an item with nothing in it ends the list, the way
                 // it does everywhere else. Otherwise the next line is an item.
-                if controller.isListItemEmpty(in: textView) {
+                if controller.isParagraphEmpty(in: textView) {
                     controller.clearList()
                     return false
                 }
@@ -157,6 +167,24 @@ struct RichTextView: UIViewRepresentable {
                     with: RichText.attributes(
                         level: .body, list: controller.list, ink: controller.inkColor
                     )
+                )
+            }
+
+            // A quote runs on the way a list does: another line stays in it, and
+            // an empty line leaves it.
+            if controller.level == .quote {
+                if controller.isLineEmpty(in: textView) {
+                    return leaveQuote(textView, at: range)
+                }
+                // A soft break rather than a paragraph break, so the whole
+                // quote stays one paragraph. Two paragraphs would stack the
+                // space below one against the space above the next, and the
+                // air meant to sit around the block would open up inside it.
+                return continueParagraph(
+                    in: textView,
+                    at: range,
+                    with: RichText.attributes(level: .quote, ink: controller.inkColor),
+                    separator: "\u{2028}"
                 )
             }
 
@@ -174,13 +202,14 @@ struct RichTextView: UIViewRepresentable {
         private func continueParagraph(
             in textView: UITextView,
             at range: NSRange,
-            with attributes: [NSAttributedString.Key: Any]
+            with attributes: [NSAttributedString.Key: Any],
+            separator: String = "\n"
         ) -> Bool {
             let storage = textView.textStorage
             storage.beginEditing()
             storage.replaceCharacters(
                 in: range,
-                with: NSAttributedString(string: "\n", attributes: attributes)
+                with: NSAttributedString(string: separator, attributes: attributes)
             )
             storage.endEditing()
 
@@ -195,6 +224,46 @@ struct RichTextView: UIViewRepresentable {
             DispatchQueue.main.async {
                 textView.typingAttributes = attributes
                 self.parent.controller.syncState()
+                textView.setNeedsDisplay()
+            }
+            return false
+        }
+
+        /// Return on an empty line inside a quote ends it. The soft break that
+        /// opened that line becomes a real paragraph break, so what follows is
+        /// no longer part of the quote — and the quote above it is left alone.
+        private func leaveQuote(_ textView: UITextView, at range: NSRange) -> Bool {
+            let source = textView.text as NSString
+            let body = RichText.attributes(level: .body, ink: parent.controller.inkColor)
+
+            var replaced = range
+            if range.location > 0,
+               source.substring(with: NSRange(location: range.location - 1, length: 1)) == "\u{2028}" {
+                replaced = NSRange(location: range.location - 1, length: range.length + 1)
+            }
+
+            let storage = textView.textStorage
+            storage.beginEditing()
+            storage.replaceCharacters(
+                in: replaced,
+                with: NSAttributedString(string: "\n", attributes: body)
+            )
+            storage.endEditing()
+
+            textView.selectedRange = NSRange(location: replaced.location + 1, length: 0)
+            publish(textView)
+            textView.setNeedsDisplay()
+
+            DispatchQueue.main.async {
+                textView.typingAttributes = body
+
+                // Applied rather than inferred. An empty last line takes its
+                // shape from the paragraph above it, so leaving it to be read
+                // back left the new line wearing the quote's indent. This says
+                // it outright — and where the quote had text after the caret,
+                // that text becomes body too, which is what leaving a quote
+                // means.
+                self.parent.controller.apply(level: .body)
                 textView.setNeedsDisplay()
             }
             return false
