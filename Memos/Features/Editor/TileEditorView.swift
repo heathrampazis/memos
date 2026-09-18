@@ -204,6 +204,10 @@ struct TileEditorView: View {
                 PhotoWidget(photo: $segment.photo.required(), color: tileColor)
                     .modifier(deletable(segment.id))
                     .padding(.vertical, 7)
+            } else if segment.link != nil {
+                LinkWidget(link: $segment.link.required(), color: tileColor)
+                    .modifier(deletable(segment.id))
+                    .padding(.vertical, 7)
             } else if segment.table != nil {
                 TableWidget(
                     block: $segment.table.required(),
@@ -225,7 +229,8 @@ struct TileEditorView: View {
                     segmentID: segment.id,
                     text: $segment.text,
                     controller: controller,
-                    onBackspaceAtStart: { mergeBack(segment.id) }
+                    onBackspaceAtStart: { mergeBack(segment.id) },
+                    onWordCommitted: detectLink
                 )
             }
         }
@@ -422,6 +427,38 @@ struct TileEditorView: View {
         insert(NoteSegment(code: CodeBlock(id: UUID())), thenType: false)
     }
 
+    /// A URL alone on a line becomes a bookmark as soon as the word is
+    /// finished. Inline links are left as text — see LinkDetector.
+    private func detectLink() {
+        guard let textView = controller.textView,
+              let id = controller.activeID,
+              let index = segments.firstIndex(where: { $0.id == id }),
+              segments[index].isText
+        else { return }
+
+        // The text view, not the binding: the binding is a frame behind.
+        let text = textView.attributedText ?? NSAttributedString()
+        let string = text.string as NSString
+        guard let found = LinkDetector.standaloneLink(
+            in: string,
+            near: textView.selectedRange.location
+        ) else { return }
+
+        let head = text.attributedSubstring(from: NSRange(location: 0, length: found.range.location))
+        let rest = text.attributedSubstring(from: NSRange(
+            location: NSMaxRange(found.range),
+            length: text.length - NSMaxRange(found.range)
+        ))
+
+        let bookmark = NoteSegment(link: LinkBlock(id: UUID(), url: found.url.absoluteString))
+        let following = NoteSegment(text: rest)
+
+        segments[index].text = head
+        segments.insert(contentsOf: [bookmark, following], at: index + 1)
+        normalise()
+        controller.focus(following.id, at: 0)
+    }
+
     private func addTable() {
         insert(NoteSegment(table: TableBlock(id: UUID())), thenType: false)
     }
@@ -467,6 +504,7 @@ struct TileEditorView: View {
         if let clip = segments[index].clip { AudioStore.delete(clip.id) }
         if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
         if let photo = segments[index].photo { PhotoStore.delete(photo.id) }
+        if let link = segments[index].link { LinkStore.delete(link.id) }
         if focusedTable?.id == id { focusedTable = nil }
         withAnimation(.spring(response: 0.34, dampingFraction: 0.8)) {
             segments.remove(at: index)
@@ -495,6 +533,7 @@ struct TileEditorView: View {
             if let clip = previous.clip { AudioStore.delete(clip.id) }
             if let drawing = previous.drawing { DrawingStore.delete(drawing.id) }
             if let photo = previous.photo { PhotoStore.delete(photo.id) }
+            if let link = previous.link { LinkStore.delete(link.id) }
             if focusedTable?.id == previous.id { focusedTable = nil }
             segments.remove(at: index - 1)
         }
@@ -568,6 +607,7 @@ struct TileEditorView: View {
         if segment.photo != nil { return "photo" }
         if segment.code != nil { return "code block" }
         if segment.table != nil { return "table" }
+        if segment.link != nil { return "bookmark" }
         return "panel"
     }
 
@@ -612,6 +652,7 @@ struct TileEditorView: View {
         AudioStore.deleteAll(in: segments)
         DrawingStore.deleteAll(in: segments)
         PhotoStore.deleteAll(in: segments)
+        LinkStore.deleteAll(in: segments)
 
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {

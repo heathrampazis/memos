@@ -19,6 +19,10 @@ final class EditorTextView: UITextView {
     /// to mean "stop being a list item".
     var onDeleteBackwardAtParagraphStart: (() -> Bool)?
 
+    /// Something that could have finished a word just landed — a space, a
+    /// newline, or a paste. The editor uses it to look for a URL.
+    var onWordCommitted: (() -> Void)?
+
     var inkColor: UIColor = .label
     var fillColor: UIColor = .systemBackground
 
@@ -32,6 +36,17 @@ final class EditorTextView: UITextView {
     required init?(coder: NSCoder) { nil }
 
     // MARK: Keys
+
+    override func insertText(_ text: String) {
+        super.insertText(text)
+        guard text == " " || text == "\n" else { return }
+        onWordCommitted?()
+    }
+
+    override func paste(_ sender: Any?) {
+        super.paste(sender)
+        onWordCommitted?()
+    }
 
     override func deleteBackward() {
         if selectedRange.length == 0, onDeleteBackwardAtParagraphStart?() == true {
