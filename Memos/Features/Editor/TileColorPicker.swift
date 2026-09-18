@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Picks the tile's background. The sheet wears the tray tone of the colour it
-/// is setting, and the editor behind updates as you tap, so the choice is
-/// previewed rather than committed blind.
+// Picks the tile's background.
 struct TileColorPicker: View {
     @Environment(AppSettings.self) private var settings
     @Binding var selection: Int
@@ -86,7 +84,7 @@ struct TileColorPicker: View {
         }
     }
 
-    /// Each swatch is a tile in miniature — same fill, same hard shadow.
+    // Each swatch is a tile in miniature — same fill, same hard shadow.
     private func swatch(_ color: TileColor) -> some View {
         let chosen = color.id == selection
         let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)

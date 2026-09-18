@@ -1,8 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Maps a Tile onto StickyCard. The mapping lives here so the component
-/// itself stays model-free.
+// Maps a Tile onto StickyCard.
 struct TileView: View {
     let tile: Tile
     let color: TileColor

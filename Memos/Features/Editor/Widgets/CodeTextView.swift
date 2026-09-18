@@ -1,14 +1,7 @@
 import Foundation
 import UIKit
 
-/// The text view inside a code block, and everything that makes typing code on
-/// a phone bearable.
-///
-/// All of it hangs off `insertText` and `deleteBackward` rather than the
-/// delegate's shouldChangeTextIn. Overriding the input methods is what the
-/// note's own editor does, it is the path every keystroke actually takes, and
-/// it means a bracket typed from the tray's symbol row behaves exactly like one
-/// typed on the keyboard.
+// The text view inside a code block, and everything that makes typing code on a phone bearable.
 final class CodeTextView: UITextView {
     var language: CodeLanguage = .plain
 
@@ -56,8 +49,8 @@ final class CodeTextView: UITextView {
         selectedRange = NSRange(location: caret + 1, length: 0)
     }
 
-    /// Return keeps the line's indentation, adds a level after an opening
-    /// bracket, and drops a waiting closer onto its own line underneath.
+    // Return keeps the line's indentation, adds a level after an opening bracket, and drops a
+    // waiting closer onto its own line underneath.
     private func openLine() {
         let source = text as NSString
         let caret = selectedRange.location
@@ -114,8 +107,8 @@ final class CodeTextView: UITextView {
 
     // MARK: Indenting
 
-    /// Lands on the next stop rather than adding a fixed four spaces, so a line
-    /// already indented two ends up at four and not at six.
+    // Lands on the next stop rather than adding a fixed four spaces, so a line already indented
+    // two ends up at four and not at six.
     func indentLine() {
         let source = text as NSString
         let caret = selectedRange.location
@@ -125,7 +118,7 @@ final class CodeTextView: UITextView {
         insertText(String(repeating: " ", count: step - (column % step)))
     }
 
-    /// The other direction, which a software keyboard has no key for at all.
+    // The other direction, which a software keyboard has no key for at all.
     func outdentLine() {
         let source = text as NSString
         let lineStart = lineStart(at: selectedRange.location, in: source)
@@ -185,8 +178,8 @@ final class CodeTextView: UITextView {
 
     // MARK: Editing
 
-    /// Goes through the text-input path rather than the storage, so the change
-    /// reaches the delegate — which is what saves the snippet and repaints it.
+    // Goes through the text-input path rather than the storage, so the change reaches the
+    // delegate — which is what saves the snippet and repaints it.
     private func edit(_ range: NSRange, with string: String, caret: Int) {
         guard let start = position(from: beginningOfDocument, offset: range.location),
               let end = position(from: start, offset: range.length),

@@ -1,8 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// Where recordings live. Each one is a file named after its id; the note only
-/// ever stores the id, so the body stays small and the audio stays on disk.
+// Where recordings live.
 enum AudioStore {
     private static var directory: URL {
         let base = URL.applicationSupportDirectory.appending(path: "Recordings")
@@ -20,15 +19,6 @@ enum AudioStore {
 
     static func delete(_ id: UUID) {
         try? FileManager.default.removeItem(at: url(for: id))
-    }
-
-    /// Called when a tile goes away. Recordings outlive the note that pointed
-    /// at them otherwise, and nothing else would ever clean them up.
-    static func deleteAll(in segments: [NoteSegment]) {
-        for segment in segments {
-            guard let clip = segment.clip else { continue }
-            delete(clip.id)
-        }
     }
 
     static func formatted(_ seconds: TimeInterval) -> String {

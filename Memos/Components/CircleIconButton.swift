@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// A round icon button on a soft tint of whatever ink it is sitting on. The
-/// tint has to be passed in: a button on a tile takes the tile's ink, one on
-/// the canvas takes the app's.
+// A round icon button on a soft tint of whatever ink it is sitting on.
 struct CircleIconButton: View {
     let systemImage: String
     var tint: Color = Theme.ink

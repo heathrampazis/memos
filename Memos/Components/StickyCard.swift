@@ -1,8 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// A sticky note. Takes plain values and a content slot — never a model type,
-/// so it can be used by the board, search, previews and the widget alike.
+// A sticky note.
 struct StickyCard<Content: View>: View {
     var color: TileColor = TilePalettes.color(0, in: .colour)
     var tilt: Double = 0

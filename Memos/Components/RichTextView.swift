@@ -2,19 +2,16 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// One run of text in a note. It does not scroll — the page does — so it sizes
-/// itself to its content and the widgets above and below it sit in the same
-/// scroll as ordinary lines.
+// One run of text in a note.
 struct RichTextView: UIViewRepresentable {
     let segmentID: UUID
     @Binding var text: NSAttributedString
     let controller: RichTextController
 
-    /// Backspace at the very start. Returns true when the editor handled it.
+    // Backspace at the very start.
     var onBackspaceAtStart: () -> Bool
 
-    /// A word was just finished, which is when a URL on its own line becomes a
-    /// bookmark.
+    // A word was just finished, which is when a URL on its own line becomes a bookmark.
     var onWordCommitted: () -> Void
 
     func makeUIView(context: Context) -> EditorTextView {
@@ -124,8 +121,8 @@ struct RichTextView: UIViewRepresentable {
             self.parent = parent
         }
 
-        /// Everything that changes the text goes through here, so the cached
-        /// height is invalidated in exactly one place.
+        // Everything that changes the text goes through here, so the cached height is
+        // invalidated in exactly one place.
         func publish(_ textView: UITextView) {
             parent.text = textView.attributedText
             isStale = true
@@ -140,12 +137,7 @@ struct RichTextView: UIViewRepresentable {
             (textView as? EditorTextView)?.revealCaret()
         }
 
-        /// A new line after a title or heading carries on as body text.
-        ///
-        /// The line break itself is given body attributes, not the heading's.
-        /// UITextView rebuilds typingAttributes from the character before the
-        /// caret whenever the selection moves, so a break that carried heading
-        /// attributes would immediately undo this.
+        // A new line after a title or heading carries on as body text.
         func textView(
             _ textView: UITextView,
             shouldChangeTextIn range: NSRange,
@@ -195,10 +187,7 @@ struct RichTextView: UIViewRepresentable {
             return continueParagraph(in: textView, at: range, with: bodyAttributes)
         }
 
-        /// Inserts the line break itself carrying the attributes the next line
-        /// should have. UITextView rebuilds typingAttributes from the character
-        /// before the caret whenever the selection moves, so a break that
-        /// carried the old attributes would immediately undo this.
+        // Inserts the line break itself carrying the attributes the next line should have.
         private func continueParagraph(
             in textView: UITextView,
             at range: NSRange,
@@ -229,9 +218,7 @@ struct RichTextView: UIViewRepresentable {
             return false
         }
 
-        /// Return on an empty line inside a quote ends it. The soft break that
-        /// opened that line becomes a real paragraph break, so what follows is
-        /// no longer part of the quote — and the quote above it is left alone.
+        // Return on an empty line inside a quote ends it.
         private func leaveQuote(_ textView: UITextView, at range: NSRange) -> Bool {
             let source = textView.text as NSString
             let body = RichText.attributes(level: .body, ink: parent.controller.inkColor)

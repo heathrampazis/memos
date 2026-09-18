@@ -11,7 +11,7 @@ struct TileEditorView: View {
     @Environment(AppSettings.self) private var settings
 
     @State private var controller = RichTextController()
-    @State private var segments: [NoteSegment] = [NoteSegment()]
+    @State private var segments: [TileSegment] = [TileSegment()]
     @State private var saveTask: Task<Void, Never>?
     @FocusState private var titleFocused: Bool
     @State private var isPickingColor = false
@@ -29,15 +29,8 @@ struct TileEditorView: View {
         var cell: TableCell
     }
 
-    /// Where a widget will land, taken the moment the (+) is pressed. Opening
-    /// the menu puts the keyboard away, and by the time a kind is chosen the
-    /// text view can no longer say where the caret was.
-    @State private var insertionPoint: InsertionPoint?
-
-    private struct InsertionPoint: Equatable {
-        let segmentID: UUID
-        let location: Int
-    }
+    // Where a widget will land, taken the moment the (+) is pressed.
+    @State private var insertionPoint: SegmentInsertion?
 
     var body: some View {
         // Title, text and widgets all live in one scroll, so a note with a
@@ -236,8 +229,8 @@ struct TileEditorView: View {
         }
     }
 
-    /// Every widget wears the same delete affordance, so the wiring is written
-    /// once here rather than three times in the cards.
+    // Every widget wears the same delete affordance, so the wiring is written once here rather
+    // than three times in the cards.
     private func deletable(_ id: UUID) -> DeletableWidget {
         DeletableWidget(
             isEditing: isEditingWidgets,
@@ -249,14 +242,12 @@ struct TileEditorView: View {
         )
     }
 
-    /// Enough to give each widget its own wobble period so they do not swing
-    /// in lockstep.
+    // Enough to give each widget its own wobble period so they do not swing in lockstep.
     private func seed(for id: UUID) -> Int {
         Int(id.uuid.0)
     }
 
-    /// Empty room under the note. Tapping it puts the caret at the end, which
-    /// is what every other notes app does and what the thumb expects.
+    // Empty room under the note.
     private var tail: some View {
         Color.clear
             .frame(height: Spacing.editorTailTap)
@@ -270,8 +261,8 @@ struct TileEditorView: View {
 
     // MARK: The tray
 
-    /// A panel's own text field wins over the note's, because the caret really
-    /// is inside it — the run of text behind it just has not been told yet.
+    // A panel's own text field wins over the note's, because the caret really is inside it —
+    // the run of text behind it just has not been told yet.
     private var trayMode: EditorTrayMode {
         if isInserting { return .insert }
         if codeSession.activeID != nil { return .code }
@@ -295,11 +286,7 @@ struct TileEditorView: View {
         }
     }
 
-    /// A table that is still in the note.
-    ///
-    /// The card owns the focus state, so it goes away with the card and never
-    /// reports the blur. Without this the tray would go on offering row and
-    /// column controls for a table that had been deleted.
+    // A table that is still in the note.
     private var activeTable: TableFocus? {
         guard let focus = focusedTable,
               segments.contains(where: { $0.id == focus.id && $0.table != nil })
@@ -307,8 +294,8 @@ struct TileEditorView: View {
         return focus
     }
 
-    /// One table is focused at a time, so the editor keeps the cell rather than
-    /// each card keeping its own and the tray having to ask around.
+    // One table is focused at a time, so the editor keeps the cell rather than each card
+    // keeping its own and the tray having to ask around.
     private func tableFocus(for id: UUID) -> Binding<TableCell?> {
         Binding(
             get: { focusedTable?.id == id ? focusedTable?.cell : nil },
@@ -322,8 +309,8 @@ struct TileEditorView: View {
         )
     }
 
-    /// Every action is relative to the focused cell, and a move takes the caret
-    /// with it so the same row can be nudged twice without hunting for it.
+    // Every action is relative to the focused cell, and a move takes the caret with it so the
+    // same row can be nudged twice without hunting for it.
     private func applyTable(_ action: TableAction) {
         guard let focus = activeTable,
               let index = segments.firstIndex(where: { $0.id == focus.id }),
@@ -376,7 +363,7 @@ struct TileEditorView: View {
         // Captured before the keyboard goes, while the text view still knows
         // where the caret is.
         if controller.isEditing, let id = controller.activeID, let view = controller.textView {
-            insertionPoint = InsertionPoint(segmentID: id, location: view.selectedRange.location)
+            insertionPoint = SegmentInsertion(segmentID: id, location: view.selectedRange.location)
         } else {
             insertionPoint = nil
         }
@@ -406,175 +393,134 @@ struct TileEditorView: View {
     private func addAudioWidget() {
         // The caret moves below the card, ready to keep writing; recording is
         // the card's own button, so nothing here starts it.
-        insert(NoteSegment(clip: AudioClip(id: UUID())), thenType: true)
+        insert(TileSegment(clip: AudioClip(id: UUID())), thenType: true)
     }
 
     private func addPanel(_ kind: PanelKind) {
         // A panel is inserted empty and takes the caret itself, so the keyboard
         // stays up and lands in the box that was just made.
-        insert(NoteSegment(panel: PanelBlock(id: UUID(), kind: kind)), thenType: false)
+        insert(TileSegment(panel: PanelBlock(id: UUID(), kind: kind)), thenType: false)
     }
 
     private func addDrawing() {
-        insert(NoteSegment(drawing: DrawingBlock(id: UUID())), thenType: false)
+        insert(TileSegment(drawing: DrawingBlock(id: UUID())), thenType: false)
     }
 
     private func addPhoto() {
-        insert(NoteSegment(photo: PhotoBlock(id: UUID())), thenType: false)
+        insert(TileSegment(photo: PhotoBlock(id: UUID())), thenType: false)
     }
 
     private func addCode() {
-        insert(NoteSegment(code: CodeBlock(id: UUID())), thenType: false)
+        insert(TileSegment(code: CodeBlock(id: UUID())), thenType: false)
     }
 
-    /// A URL alone on a line becomes a bookmark as soon as the word is
-    /// finished. Inline links are left as text — see LinkDetector.
+    // A URL alone on a line becomes a bookmark as soon as the word is finished.
+    // Inline links stay text — see LinkDetector for why.
     private func detectLink() {
         guard let textView = controller.textView,
               let id = controller.activeID,
-              let index = segments.firstIndex(where: { $0.id == id }),
+              let index = segments.index(of: id),
               segments[index].isText
         else { return }
 
         // The text view, not the binding: the binding is a frame behind.
         let text = textView.attributedText ?? NSAttributedString()
-        let string = text.string as NSString
         guard let found = LinkDetector.standaloneLink(
-            in: string,
+            in: text.string as NSString,
             near: textView.selectedRange.location
         ) else { return }
 
-        let head = text.attributedSubstring(from: NSRange(location: 0, length: found.range.location))
-        let rest = text.attributedSubstring(from: NSRange(
-            location: NSMaxRange(found.range),
-            length: text.length - NSMaxRange(found.range)
-        ))
+        // The run in the editor is ahead of the one in segments, so it is taken
+        // across before the line is cut out of it.
+        segments[index].text = text
 
-        let bookmark = NoteSegment(link: LinkBlock(id: UUID(), url: found.url.absoluteString))
-        let following = NoteSegment(text: rest)
+        let bookmark = TileSegment(link: LinkBlock(id: UUID(), url: found.url.absoluteString))
+        let following = segments.insert(bookmark, into: id, replacing: found.range)
 
-        segments[index].text = head
-        segments.insert(contentsOf: [bookmark, following], at: index + 1)
-        normalise()
-        controller.focus(following.id, at: 0)
+        segments.normalise()
+        if let following { controller.focus(following, at: 0) }
     }
 
     private func addTable() {
-        insert(NoteSegment(table: TableBlock(id: UUID())), thenType: false)
+        insert(TileSegment(table: TableBlock(id: UUID())), thenType: false)
     }
 
-    /// The widget takes the caret's line as the place to break the note in two:
-    /// the text above stays in one run, the text below starts another, and the
-    /// widget sits between them. With nothing focused it goes on the end.
-    private func insert(_ widget: NoteSegment, thenType: Bool) {
+    // A widget breaks the run of text at the caret's line: the text above stays
+    // in one run, the text below starts another, and the widget sits between.
+    // With nothing focused it goes on the end.
+    private func insert(_ widget: TileSegment, thenType: Bool) {
         let point = insertionPoint
         insertionPoint = nil
 
         guard let point,
-              let index = segments.firstIndex(where: { $0.id == point.segmentID }),
+              let index = segments.index(of: point.segmentID),
               segments[index].isText
         else {
             segments.append(widget)
-            normalise()
+            segments.normalise()
             if thenType, let last = segments.last { controller.focus(last.id, at: 0) }
             return
         }
 
-        let full = segments[index].text
-        let string = full.string as NSString
-        let caret = min(point.location, full.length)
-        let cut = full.length == 0
+        let text = segments[index].text
+        let caret = min(point.location, text.length)
+        let cut = text.length == 0
             ? 0
-            : NSMaxRange(string.paragraphRange(for: NSRange(location: caret, length: 0)))
+            : NSMaxRange((text.string as NSString).paragraphRange(for: NSRange(location: caret, length: 0)))
 
-        let head = full.attributedSubstring(from: NSRange(location: 0, length: cut))
-        let rest = full.attributedSubstring(from: NSRange(location: cut, length: full.length - cut))
-        let following = NoteSegment(text: rest)
-
-        segments[index].text = head
-        segments.insert(contentsOf: [widget, following], at: index + 1)
-        if thenType { controller.focus(following.id, at: 0) }
+        let following = segments.insert(
+            widget,
+            into: point.segmentID,
+            replacing: NSRange(location: cut, length: 0)
+        )
+        if thenType, let following { controller.focus(following, at: 0) }
     }
 
     private func removeWidget(_ id: UUID) {
-        guard let index = segments.firstIndex(where: { $0.id == id }),
-              !segments[index].isText
-        else { return }
+        guard let index = segments.index(of: id), !segments[index].isText else { return }
 
-        if let clip = segments[index].clip { AudioStore.delete(clip.id) }
-        if let drawing = segments[index].drawing { DrawingStore.delete(drawing.id) }
-        if let photo = segments[index].photo { PhotoStore.delete(photo.id) }
-        if let link = segments[index].link { LinkStore.delete(link.id) }
+        WidgetStore.delete(segments[index])
         if focusedTable?.id == id { focusedTable = nil }
+
         withAnimation(.spring(response: 0.34, dampingFraction: 0.8)) {
             segments.remove(at: index)
         }
 
         if index < segments.count, segments[index].isText {
-            joinRuns(endingAt: segments[index].id)
+            join(into: segments[index].id)
         }
-        normalise()
+        segments.normalise()
 
-        if !segments.contains(where: { !$0.isText }) { stopEditingWidgets() }
+        if segments.allSatisfy(\.isText) { stopEditingWidgets() }
     }
 
-    /// Backspace at the very start of a run. An empty widget above is taken the
-    /// way a character would be; otherwise the two runs become one again.
+    // Backspace at the very start of a run. An empty widget above it is taken
+    // the way a character would be; a recording or a written panel is deleted
+    // on purpose, from its own badge.
     private func mergeBack(_ id: UUID) -> Bool {
-        guard let index = segments.firstIndex(where: { $0.id == id }), index > 0 else {
-            return false
-        }
+        guard let index = segments.index(of: id), index > 0 else { return false }
 
-        let previous = segments[index - 1]
-        if !previous.isText {
-            // Only an untouched widget goes to a single backspace. A recording
-            // or a written panel is deleted on purpose, from its own menu.
-            guard previous.isEmptyWidget else { return true }
-            if let clip = previous.clip { AudioStore.delete(clip.id) }
-            if let drawing = previous.drawing { DrawingStore.delete(drawing.id) }
-            if let photo = previous.photo { PhotoStore.delete(photo.id) }
-            if let link = previous.link { LinkStore.delete(link.id) }
-            if focusedTable?.id == previous.id { focusedTable = nil }
+        let above = segments[index - 1]
+        if !above.isText {
+            guard above.isEmptyWidget else { return true }
+            WidgetStore.delete(above)
+            if focusedTable?.id == above.id { focusedTable = nil }
             segments.remove(at: index - 1)
         }
 
-        joinRuns(endingAt: id)
-        normalise()
+        join(into: id)
+        segments.normalise()
         return true
     }
 
-    /// Two runs of text only ever end up next to each other when the widget
-    /// between them went away, so joining them is what puts the note back.
-    private func joinRuns(endingAt id: UUID) {
-        guard let index = segments.firstIndex(where: { $0.id == id }),
-              index > 0,
-              segments[index - 1].isText
-        else { return }
-
-        // Joined into the run that has the caret, not the one above it: the
-        // text view keeping its place is what stops the keyboard dropping and
-        // coming back on every merge.
-        let previous = segments[index - 1]
-        let caret = previous.text.length
-        let joined = NSMutableAttributedString(attributedString: previous.text)
-        joined.append(segments[index].text)
-
-        segments[index].text = joined
-        segments.remove(at: index - 1)
+    private func join(into id: UUID) {
+        guard let caret = segments.joinBackwards(into: id) else { return }
         controller.focus(id, at: caret)
-    }
-
-    /// A note always begins and ends with somewhere to type, or a widget at
-    /// either end would leave the note with no way back into the text.
-    private func normalise() {
-        if segments.isEmpty { segments = [NoteSegment()] }
-        if segments.first?.isText == false { segments.insert(NoteSegment(), at: 0) }
-        if segments.last?.isText == false { segments.append(NoteSegment()) }
     }
 
     private func focusEnd() {
         stopEditingWidgets()
-        guard let last = segments.last(where: { $0.isText }) else { return }
+        guard let last = segments.lastText else { return }
         controller.focus(last.id, at: last.text.length)
     }
 
@@ -613,20 +559,19 @@ struct TileEditorView: View {
 
     // MARK: Loading and saving
 
-    /// The archived text has whatever ink colour it was written with baked in.
-    /// Changing palette or appearance has to repaint it, or a note written on a
-    /// light tile stays black on a dark one.
+    // The archived text has whatever ink colour it was written with baked in.
     private func load() {
         controller.inkColor = UIColor(tileColor.ink)
         controller.fillColor = UIColor(tileColor.fill)
-        segments = NoteCodec.repainted(NoteCodec.decode(tile.bodyData), ink: UIColor(tileColor.ink))
-        normalise()
+        segments = TileCodec.decode(tile.bodyData)
+        segments.repaint(ink: UIColor(tileColor.ink))
+        segments.normalise()
     }
 
     private func reload() {
         controller.inkColor = UIColor(tileColor.ink)
         controller.fillColor = UIColor(tileColor.fill)
-        segments = NoteCodec.repainted(segments, ink: UIColor(tileColor.ink))
+        segments.repaint(ink: UIColor(tileColor.ink))
     }
 
     private func scheduleSave() {
@@ -639,20 +584,17 @@ struct TileEditorView: View {
     }
 
     private func commit() {
-        tile.bodyData = NoteCodec.encode(segments)
-        tile.plainText = NoteCodec.plainText(segments)
+        tile.bodyData = TileCodec.encode(segments)
+        tile.plainText = TileCodec.plainText(segments)
         tile.touch()
     }
 
-    /// Deleted on the next pass, once the pop has finished — writing to or
-    /// reading a removed model mid-transition is a crash.
+    // Deleted on the next pass, once the pop has finished — writing to or reading a removed
+    // model mid-transition is a crash.
     private func remove() {
         let context = context
         let tile = tile
-        AudioStore.deleteAll(in: segments)
-        DrawingStore.deleteAll(in: segments)
-        PhotoStore.deleteAll(in: segments)
-        LinkStore.deleteAll(in: segments)
+        WidgetStore.deleteAll(in: segments)
 
         DispatchQueue.main.async {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
@@ -661,8 +603,7 @@ struct TileEditorView: View {
         }
     }
 
-    /// A tile with no title and no content is not a tile — it goes back to
-    /// being a free slot.
+    // A tile with no title and no content is not a tile — it goes back to being a free slot.
     private func discardIfBlank() {
         guard tile.isBlank else { return }
         let context = context

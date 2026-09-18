@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Text styles. Bricolage Grotesque and Hanken Grotesk replace the system
-/// font here in M0-2; nothing outside this file needs to change.
+// Text styles.
 enum Typography {
     static let wordmark = Font.system(size: 30, weight: .heavy)
     static let editorTitle = Font.system(size: 27, weight: .heavy)
@@ -16,8 +15,7 @@ enum Typography {
     static let sheetTitle = Font.system(size: 20, weight: .heavy)
     static let barLabel = Font.system(size: 13, weight: .bold)
 
-    /// The same ramp the editor uses, for widgets that render note text
-    /// themselves. Sizes come from TextLevel so the two cannot drift.
+    // The same ramp the editor uses, for widgets that render note text themselves.
     static func block(_ level: TextLevel, bold: Bool) -> Font {
         switch level {
         case .title: .system(size: level.size, weight: bold ? .black : .heavy)

@@ -42,7 +42,7 @@ enum WidgetChoice: Hashable, Identifiable {
         }
     }
 
-    /// Panels carry their own colour; media widgets take the tile's ink.
+    // Panels carry their own colour; media widgets take the tile's ink.
     var accent: Color? {
         switch self {
         case .panel(let kind): kind.accent
@@ -54,12 +54,7 @@ enum WidgetChoice: Hashable, Identifiable {
     static let panels: [WidgetChoice] = PanelKind.allCases.map(WidgetChoice.panel)
 }
 
-/// Everything that can go in a note, named. A grid rather than a column: it
-/// stays the same height as widgets are added, and it has room for the names —
-/// which a row of bare circles never did.
-///
-/// It fills the tray rather than arriving as a sheet, so the (+) swaps what the
-/// bar is for instead of stacking another surface on top of the note.
+// Everything that can go in a note, named.
 struct WidgetMenu: View {
     let color: TileColor
     var onChoose: (WidgetChoice) -> Void

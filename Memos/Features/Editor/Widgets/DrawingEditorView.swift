@@ -2,8 +2,7 @@ import Foundation
 import PencilKit
 import SwiftUI
 
-/// A screen of its own. A sketch wants the whole display and a tool bar that
-/// stays put, neither of which fits inside a card in the middle of a note.
+// A screen of its own.
 struct DrawingEditorView: View {
     let color: TileColor
     var onSave: (PKDrawing) -> Void

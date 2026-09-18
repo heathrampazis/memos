@@ -1,9 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Adds a widget to a tile. It floats over the note rather than sitting in the
-/// tray, because it is not a formatting control — it swaps what the tray is
-/// for, and keeping it apart is what makes that read as a mode change.
+// Adds a widget to a tile.
 struct AddWidgetButton: View {
     let color: TileColor
     let isOpen: Bool

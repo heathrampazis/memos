@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// A tile on the board, with its press, jiggle and delete affordances.
+// A tile on the board, with its press, jiggle and delete affordances.
 struct BoardTile: View {
     let tile: Tile
     let color: TileColor
@@ -34,12 +34,12 @@ struct BoardTile: View {
             }
     }
 
-    /// Tapping a tile while editing does nothing; the board is left the way
-    /// the home screen leaves it, where only the badge deletes.
+    // Tapping a tile while editing does nothing; the board is left the way the home screen
+    // leaves it, where only the badge deletes.
     private func onDelete_noop() {}
 
-    /// Flat, and a step darker than the tile it sits on, so it belongs to the
-    /// tile rather than being stuck onto it.
+    // Flat, and a step darker than the tile it sits on, so it belongs to the tile rather than
+    // being stuck onto it.
     @ViewBuilder
     private var deleteBadge: some View {
         if isEditing {

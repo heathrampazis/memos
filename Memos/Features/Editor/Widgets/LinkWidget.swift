@@ -2,11 +2,7 @@ import Foundation
 import SwiftUI
 import UIKit
 
-/// A bookmark, sitting where the URL was typed.
-///
-/// Compact rather than a hero card: a note is mostly writing, and a link that
-/// takes a third of the screen buries the sentence that explains why it is
-/// there.
+// A bookmark, sitting where the URL was typed.
 struct LinkWidget: View {
     @Binding var link: LinkBlock
     let color: TileColor

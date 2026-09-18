@@ -1,26 +1,17 @@
 import Foundation
 import UIKit
 
-/// The text view used for one run of a note.
-///
-/// Three things it needs that a plain UITextView will not do: tell the editor
-/// when backspace runs off the top of the run, keep the caret in view now that
-/// the page scrolls rather than it, and draw list markers.
-///
-/// The markers are drawn rather than typed into the string. That keeps the text
-/// exactly what the author wrote — nothing to renumber, nothing they can delete
-/// halfway, and previews and search stay clean.
+// The text view used for one run of a note.
 final class EditorTextView: UITextView {
-    /// Returns true when the editor consumed the press — joined this run onto
-    /// the one above, or removed the widget between them.
+    // Returns true when the editor consumed the press — joined this run onto the one above, or
+    // removed the widget between them.
     var onDeleteBackwardAtStart: (() -> Bool)?
 
-    /// Backspace at the start of any paragraph. Returns true when it was taken
-    /// to mean "stop being a list item".
+    // Backspace at the start of any paragraph. True when it was taken to mean
+    // "stop being a list item".
     var onDeleteBackwardAtParagraphStart: (() -> Bool)?
 
-    /// Something that could have finished a word just landed — a space, a
-    /// newline, or a paste. The editor uses it to look for a URL.
+    // Something that could have finished a word just landed — a space, a newline, or a paste.
     var onWordCommitted: (() -> Void)?
 
     var inkColor: UIColor = .label
@@ -94,11 +85,7 @@ final class EditorTextView: UITextView {
         drawListMarkers(paragraphs, attributes)
     }
 
-    /// One unbroken rule per quote.
-    ///
-    /// Return keeps you inside a quote, so a long one is several paragraphs —
-    /// and a stack of short rules with gaps between them reads as several
-    /// quotes rather than one.
+    // One unbroken rule per quote.
     private func drawQuoteRules(
         _ paragraphs: [NSRange],
         _ attributes: [[NSAttributedString.Key: Any]]
@@ -183,8 +170,8 @@ final class EditorTextView: UITextView {
         return ranges
     }
 
-    /// An empty paragraph carries no characters to hold its attributes, so what
-    /// the caret is about to type stands in for them.
+    // An empty paragraph carries no characters to hold its attributes, so what the caret is
+    // about to type stands in for them.
     private func markerAttributes(
         for paragraph: NSRange,
         in text: NSAttributedString
@@ -320,8 +307,8 @@ final class EditorTextView: UITextView {
 }
 
 extension EditorTextView: UIGestureRecognizerDelegate {
-    /// Shares with the text view's own tap, so a tap in the marker column both
-    /// ticks the box and leaves the caret where it was.
+    // Shares with the text view's own tap, so a tap in the marker column both ticks the box and
+    // leaves the caret where it was.
     func gestureRecognizer(
         _ recognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer

@@ -2,8 +2,7 @@ import Foundation
 import PencilKit
 import UIKit
 
-/// Where sketches live, one file per drawing. Same arrangement as recordings:
-/// the note stores an id, the bytes stay on disk.
+// Where sketches live, one file per drawing.
 enum DrawingStore {
     private static var directory: URL {
         let base = URL.applicationSupportDirectory.appending(path: "Drawings")
@@ -28,15 +27,8 @@ enum DrawingStore {
         try? FileManager.default.removeItem(at: url(for: id))
     }
 
-    static func deleteAll(in segments: [NoteSegment]) {
-        for segment in segments {
-            guard let drawing = segment.drawing else { continue }
-            delete(drawing.id)
-        }
-    }
-
-    /// Rendered from the strokes' own bounds rather than the canvas, so the card
-    /// frames the drawing instead of whatever empty space it was made in.
+        // Rendered from the strokes' own bounds rather than the canvas, so the card frames the
+        // drawing instead of whatever empty space it was made in.
     static func image(for id: UUID, scale: CGFloat = 3) -> UIImage? {
         guard let drawing = load(id) else { return nil }
         let bounds = drawing.bounds

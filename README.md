@@ -1,63 +1,56 @@
 # Memos
 
-An iOS note-taking app. Tiles are sticky notes on the home page — text, checklists,
-photos, drawings and audio, organised into colour-coded folders.
+A note app for iPhone. Eight tiles, one screen, no scrolling — the cap is the
+product, not a limitation waiting to be lifted.
 
-## Requirements
+Built with SwiftUI and SwiftData, iOS 18 and up.
 
-- Xcode 16 or later
-- iOS 17 or later (SwiftData)
-- No third-party dependencies
+## Layout
 
-## Running
+```
+Memos/
+├─ App/          entry point, settings, the SwiftData container
+├─ Design/       palettes, type ramp, spacing — no logic, no models
+├─ Models/       Tile and the blocks that make up its body
+├─ Components/   reusable views that know nothing about a Tile
+├─ Extensions/
+└─ Features/
+    ├─ Home/     the board of eight tiles
+    ├─ Editor/   the tile editor, its tray, and every widget
+    └─ Settings/
+```
 
-Open `Memos.xcodeproj` and run the `Memos` scheme. There is no setup step.
+Two rules keep it that way:
 
-## Project structure
+**Components never take a model.** `StickyCard` takes a colour, a tilt and some
+content — not a `Tile`. That is why the same card renders the board, the colour
+picker's swatches and a home screen widget without any of them inventing a fake
+Tile to pass in.
 
-Code is organised by responsibility rather than by type. Folders are added as
-the work reaches them.
+**Design holds no logic.** Every colour comes from `TilePalettes`, every size
+from `Spacing`, every font from `Typography`. A magic number in a view is a bug.
 
-| Folder | Holds |
-|---|---|
-| `App/` | Entry point and root navigation |
-| `Design/` | Palette, theme, typography, spacing, icons. No app logic |
-| `Models/` | `Tile`, `Folder`, `Block` |
-| `Storage/` | `TileStore` — the only code that touches persistence |
-| `Components/` | Reusable views that take plain values, never model types |
-| `Features/` | One folder per screen area: Home, Editor, Folders, Search, Settings |
-| `Resources/` | Fonts and asset catalogue |
+## The board
 
-### The rule that keeps it modular
+Eight fixed places, laid out as one `ZStack` of positioned cards rather than a
+stack of rows — a tile dragged between rows has to stay in the same container
+or SwiftUI reads the move as a delete and an insert. Holding a tile starts
+arrange mode: everything wobbles, each grows an (x), and tiles can be carried
+to a new place. Order lives in `Tile.sortIndex`.
 
-**Components must not know about the data model.** `StickyCard` takes a colour,
-an icon, a title and a subtitle — not a `Tile`. The card appears on the home page,
-in search results, in the widget, in folder previews and in settings; if it took
-a `Tile`, every one of those would need to fabricate one just to render, and so
-would every SwiftUI preview.
+## The editor
 
-Features own screens. Components own the pieces screens share. When a view is
-used by two features, it moves to `Components/`.
+See `Memos/Features/Editor/README.md`. The short version: a tile's body is an
+ordered list of segments — runs of text and widgets — and everything else
+follows from that.
 
-## Conventions
+## Storage
 
-- Colours come from `Theme`, sizes from `Spacing`, fonts from `Typography`.
-  No literals at call sites.
-- Comment *why*, not *what*. No file header blocks, no section dividers.
-- Every new view has a `#Preview`.
-- One issue, one branch, one pull request. `main` always builds.
+`Tile` is the only `@Model`. Its body is a list of segments encoded by
+`TileCodec`; anything too large to sit in a note (recordings, sketches, photos,
+bookmark thumbnails) lives in its own file store under Application Support,
+with the note keeping only an id.
 
-Branches are named after the ticket: `m0-1/repo-setup`, `m1-3/masonry-layout`.
-
-## Roadmap
-
-| Milestone | Scope |
-|---|---|
-| M0 | Foundation — design system and `StickyCard` |
-| M1 | Home page, running on sample data |
-| M2 | Persistence with SwiftData |
-| M3 | Text editor and the formatting tray |
-| M4 | Media blocks — photo, camera, audio, drawing |
-| M5 | Block selection and image sizing |
-| M6 | Folders, search, appearance settings |
-| M7 | Widget, haptics, app icon, accessibility |
+`ModelContainerFactory` rebuilds the store from scratch in debug builds when a
+schema change stops it opening. That is deliberate while the shape is still
+moving, and wants replacing with a migration plan before anyone's notes matter.

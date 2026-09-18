@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An empty place on the board. Tapping it makes a tile.
+// An empty place on the board.
 struct FreeSlotView: View {
     let fill: Color
     let outline: Color

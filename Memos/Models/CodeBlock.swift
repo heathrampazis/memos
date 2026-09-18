@@ -1,7 +1,6 @@
 import Foundation
 
-/// A snippet in a note. Unlike a drawing or a photo the source is small, so it
-/// rides inside the note itself rather than in a file of its own.
+// A snippet in a note.
 struct CodeBlock: Equatable, Codable {
     var id: UUID
     var language: CodeLanguage = .plain
@@ -31,8 +30,7 @@ enum CodeLanguage: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// How a line is commented out. Nil where the language has no comments
-    /// worth a button.
+    // How a line is commented out.
     var comment: (open: String, close: String?)? {
         switch self {
         case .swift, .javascript, .java, .go, .c: ("//", nil)
@@ -42,8 +40,8 @@ enum CodeLanguage: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// A language dropped or renamed later reads as plain text rather than
-    /// failing the decode and taking the whole note with it.
+    // A language dropped or renamed later reads as plain text rather than failing the decode
+    // and taking the whole note with it.
     init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = CodeLanguage(rawValue: raw) ?? .plain

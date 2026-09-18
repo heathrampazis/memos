@@ -8,14 +8,7 @@ enum DrawingTool: Equatable {
     case eraser
 }
 
-/// A canvas that owns its undo stack.
-///
-/// PencilKit registers every stroke with whatever undo manager it finds on the
-/// responder chain, and inside a full-screen cover that is not reliably ours.
-/// Giving the canvas one of its own makes undo authoritative over PencilKit's
-/// own state — which a parallel stack of snapshots never was, however carefully
-/// it was kept: assigning `drawing` changed what you saw while PencilKit went
-/// on composing the next stroke against what it still believed was there.
+// A canvas that owns its undo stack.
 final class DrawingCanvasView: PKCanvasView {
     let history = UndoManager()
 
@@ -36,7 +29,7 @@ final class DrawingController {
         initial = drawing
     }
 
-    /// The canvas is the only copy. Nothing is mirrored, so nothing can drift.
+    // The canvas is the only copy.
     var drawing: PKDrawing {
         canvas?.drawing ?? initial
     }

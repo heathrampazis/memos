@@ -2,8 +2,7 @@ import Foundation
 import LinkPresentation
 import UIKit
 
-/// What came back about a page. Data rather than a UIImage, so it can cross
-/// back to the view without dragging a non-sendable type with it.
+// What came back about a page.
 struct LinkPreview: Sendable {
     let title: String
     let imageData: Data?
@@ -24,8 +23,7 @@ enum LinkMetadata {
         )
     }
 
-    /// The page's own image first, its icon second. Either is better than a
-    /// grey square, and the card shows both the same way.
+    // The page's own image first, its icon second.
     private static func picture(from metadata: LPLinkMetadata) async -> Data? {
         for provider in [metadata.imageProvider, metadata.iconProvider].compactMap({ $0 }) {
             if let image = await load(provider), let data = image.pngData() {

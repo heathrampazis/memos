@@ -1,12 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// Holding a widget puts the note into the same delete mode the board uses:
-/// everything wobbles, and each one grows an (x) in its corner.
-///
-/// The widget itself knows nothing about this. Deleting a voice memo means
-/// deleting a file and rejoining the text either side of it, which is the
-/// editor's business, not the card's.
+// Holding a widget puts the note into the same delete mode the board uses: everything wobbles,
+// and each one grows an (x) in its corner.
 struct DeletableWidget: ViewModifier {
     let isEditing: Bool
     let color: TileColor
@@ -46,8 +42,8 @@ struct DeletableWidget: ViewModifier {
             )
     }
 
-    /// Flat, and a step darker than the tile it sits on, so it belongs to the
-    /// note rather than being stuck onto it. Same badge as the board.
+    // Flat, and a step darker than the tile it sits on, so it belongs to the note rather than
+    // being stuck onto it.
     @ViewBuilder
     private var deleteBadge: some View {
         if isEditing {

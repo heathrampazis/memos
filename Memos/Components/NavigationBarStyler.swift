@@ -1,12 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Paints the navigation bar a flat colour with no separator.
-///
-/// SwiftUI's toolbarBackground gets the colour right but keeps the hairline
-/// under it, and on a coloured tile that line reads as a seam across the top of
-/// the note. Setting the appearance on the screen's own navigation item rather
-/// than on the bar keeps it scoped to this screen.
+// Paints the navigation bar a flat colour with no separator.
 struct NavigationBarStyler: UIViewControllerRepresentable {
     let color: UIColor
 
@@ -52,9 +47,8 @@ struct NavigationBarStyler: UIViewControllerRepresentable {
             navigationController?.navigationBar.setNeedsLayout()
         }
 
-        /// SwiftUI nests hosting controllers, so the parent of this one is not
-        /// necessarily the screen the bar is reading from. The owner is the
-        /// first one up the chain that the navigation stack actually holds.
+        // SwiftUI nests hosting controllers, so the parent of this one is not necessarily the
+        // screen the bar is reading from.
         private var owner: UIViewController? {
             var candidate: UIViewController? = self
             while let current = candidate {

@@ -4,8 +4,7 @@ import UIKit
 enum TextLevel: String, Codable, CaseIterable {
     case title, heading, body, quote
 
-    /// The levels that appear as named pills. Quote gets a mark of its own —
-    /// a fourth pill does not fit the row, and the mark reads faster anyway.
+    // The levels that appear as named pills.
     static let named: [TextLevel] = [.title, .heading, .body]
 
     var label: String {
@@ -25,8 +24,7 @@ enum TextLevel: String, Codable, CaseIterable {
         }
     }
 
-    /// Titles and headings carry their weight here. That is not the same thing
-    /// as the author pressing bold, and the two must not be confused.
+    // Titles and headings carry their weight here.
     var weight: UIFont.Weight {
         switch self {
         case .title: .heavy
@@ -35,11 +33,7 @@ enum TextLevel: String, Codable, CaseIterable {
         }
     }
 
-    /// What pressing B gives this level.
-    ///
-    /// Each level steps up from its own base rather than having the bold trait
-    /// added, because a heading that is already bold cannot get any bolder that
-    /// way — which is the only reason headings used to be semibold.
+    // What pressing B gives this level.
     var boldWeight: UIFont.Weight {
         switch self {
         case .title: .black
@@ -52,9 +46,8 @@ enum TextLevel: String, Codable, CaseIterable {
         .systemFont(ofSize: size, weight: weight)
     }
 
-    /// Space above separates a heading from whatever came before it; the much
-    /// smaller space below keeps it attached to what it introduces. A heading
-    /// floating equidistant between two paragraphs belongs to neither.
+    // Space above separates a heading from whatever came before it; the much smaller space
+    // below keeps it attached to what it introduces.
     var paragraphStyle: NSParagraphStyle {
         let style = NSMutableParagraphStyle()
         switch self {
@@ -103,22 +96,18 @@ enum TextListKind: String, Codable, CaseIterable {
 }
 
 extension NSAttributedString.Key {
-    /// Which level a paragraph is, so the bar reflects the caret and styling
-    /// survives a round trip through storage.
+    // Which level a paragraph is, so the bar reflects the caret and styling survives a round
+    // trip through storage.
     static let memoLevel = NSAttributedString.Key("memos.level")
 
-    /// Whether the author asked for bold, as opposed to the weight a title or
-    /// heading already carries. Reading boldness off the font cannot tell the
-    /// two apart, so a heading reports itself bold and hands that to whatever
-    /// follows it.
+    // Whether the author asked for bold, as opposed to the weight a title or heading already
+    // carries.
     static let memoBold = NSAttributedString.Key("memos.bold")
 
-    /// Which kind of list a paragraph belongs to. The markers themselves are
-    /// drawn, never inserted, so the text stays exactly what the author typed
-    /// and numbering never has to be rewritten into the string.
+    // Which kind of list a paragraph belongs to.
     static let memoList = NSAttributedString.Key("memos.list")
 
-    /// A ticked checklist item.
+    // A ticked checklist item.
     static let memoChecked = NSAttributedString.Key("memos.checked")
 }
 
@@ -157,8 +146,8 @@ enum RichText {
         return attributes
     }
 
-    /// Indented far enough to clear the marker column, with wrapped lines
-    /// landing under the first one rather than under the marker.
+    // Indented far enough to clear the marker column, with wrapped lines landing under the
+    // first one rather than under the marker.
     static func paragraphStyle(level: TextLevel, list: TextListKind?) -> NSParagraphStyle {
         guard list != nil,
               let style = level.paragraphStyle.mutableCopy() as? NSMutableParagraphStyle
@@ -212,14 +201,14 @@ enum RichText {
         attributes[.memoChecked] as? Bool ?? false
     }
 
-    /// Ticked items are struck through and faded; a quote sits a shade back
-    /// from the writing around it. Everything else is full ink.
+    // Ticked items are struck through and faded; a quote sits a shade back from the writing
+    // around it.
     static func tint(level: TextLevel, ticked: Bool, ink: UIColor) -> UIColor {
         if ticked { return ink.withAlphaComponent(0.45) }
         return level == .quote ? ink.withAlphaComponent(0.72) : ink
     }
 
-    /// Repaints every run to the given ink, leaving structure untouched.
+    // Repaints every run to the given ink, leaving structure untouched.
     static func repainted(_ text: NSAttributedString, ink: UIColor) -> NSAttributedString {
         guard text.length > 0 else { return text }
         let copy = NSMutableAttributedString(attributedString: text)
@@ -238,8 +227,7 @@ enum RichText {
         return copy
     }
 
-    /// Archive and restore one run of text. Widgets are their own segments in
-    /// NoteCodec, so nothing but text ever reaches this.
+    // Archive and restore one run of text.
     static func archive(_ text: NSAttributedString) -> Data {
         (try? NSKeyedArchiver.archivedData(withRootObject: text, requiringSecureCoding: false)) ?? Data()
     }

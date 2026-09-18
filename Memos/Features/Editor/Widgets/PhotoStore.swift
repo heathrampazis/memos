@@ -2,8 +2,8 @@ import Foundation
 import UIKit
 
 enum PhotoStore {
-    /// A note does not need a twelve-megapixel original, and one that kept them
-    /// would be slow to open and heavy to back up.
+    // A note does not need a twelve-megapixel original, and one that kept them would be slow to
+    // open and heavy to back up.
     static let maximumEdge: CGFloat = 2000
 
     private static var directory: URL {
@@ -16,9 +16,7 @@ enum PhotoStore {
         directory.appending(path: "\(id.uuidString).jpg")
     }
 
-    /// Returns the stored size, which is what the card needs to hold its shape.
-    /// Safe to call off the main thread, and worth doing: rescaling a large
-    /// photo is long enough to be seen as a stutter.
+    // Returns the stored size, which is what the card needs to hold its shape.
     static func write(_ data: Data, id: UUID) -> CGSize? {
         guard let image = UIImage(data: data) else { return nil }
         let scaled = downscaled(image)
@@ -34,13 +32,6 @@ enum PhotoStore {
 
     static func delete(_ id: UUID) {
         try? FileManager.default.removeItem(at: url(for: id))
-    }
-
-    static func deleteAll(in segments: [NoteSegment]) {
-        for segment in segments {
-            guard let photo = segment.photo else { continue }
-            delete(photo.id)
-        }
     }
 
     private static func downscaled(_ image: UIImage) -> UIImage {

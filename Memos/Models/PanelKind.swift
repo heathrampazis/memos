@@ -26,15 +26,14 @@ enum PanelKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// A kind that has since been renamed or dropped reads as a plain note
-    /// rather than failing the decode and taking the whole note with it.
+    // A kind that has since been renamed or dropped reads as a plain note rather than failing
+    // the decode and taking the whole note with it.
     init(from decoder: any Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)
         self = PanelKind(rawValue: raw) ?? .info
     }
 
-    /// Mid-dark by design. Tiles stay light whatever the app's appearance, so
-    /// one value each carries on every palette without a second set.
+    // Mid-dark by design.
     var accent: Color {
         switch self {
         case .info: Color(hex: 0x2B6CB0)

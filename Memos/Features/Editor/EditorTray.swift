@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// What the note is doing, which is what the tray shows.
+// What the note is doing, which is what the tray shows.
 enum EditorTrayMode: Equatable {
     case idle
     case title
@@ -12,12 +12,7 @@ enum EditorTrayMode: Equatable {
     case insert
 }
 
-/// The editing tray, docked to the bottom of the editor.
-///
-/// One surface, several contents. Writing gets the two formatting rows; the
-/// caret in a panel gets that panel's kinds; the (+) floating over the note
-/// swaps the whole thing for the widget menu. Nothing is stacked on top of the
-/// note and nothing appears while there is nothing to format.
+// The editing tray, docked to the bottom of the editor.
 struct EditorTray: View {
     let controller: RichTextController
     let color: TileColor
@@ -70,7 +65,7 @@ struct EditorTray: View {
 
     // MARK: Rows
 
-    /// Paragraph shape, on its own line the way it reads.
+    // Paragraph shape, on its own line the way it reads.
     private var levelRow: some View {
         HStack(spacing: 7) {
             ForEach(TextLevel.named, id: \.self) { level in
@@ -80,7 +75,7 @@ struct EditorTray: View {
         }
     }
 
-    /// Everything that applies to the words being typed, plus the way out.
+    // Everything that applies to the words being typed, plus the way out.
     private var inlineRow: some View {
         HStack(spacing: 4) {
             if mode == .text {
@@ -108,16 +103,14 @@ struct EditorTray: View {
         .frame(height: 40)
     }
 
-    /// The keys a software keyboard buries three taps deep, which is most of
-    /// what writing code on a phone actually costs.
+    // The keys a software keyboard buries three taps deep, which is most of what writing code
+    // on a phone actually costs.
     private static let symbols = [
         "{", "}", "(", ")", "[", "]", "<", ">", "\"", "'", "=", ";", ":",
         ".", ",", "_", "-", "+", "*", "/", "|", "&", "#", "$", "!", "?",
     ]
 
-    /// Rows and columns get a line each. Each button carries the band it acts
-    /// on, so it says "add a row" or "move this column left" on its own — no
-    /// labels, and no guessing which line is which.
+    // Rows and columns get a line each.
     private var tableRows: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 5) {
@@ -188,8 +181,8 @@ struct EditorTray: View {
         }
     }
 
-    /// Commenting a line out is the one code action that is a whole thought
-    /// rather than a character, so it gets a labelled button of its own.
+    // Commenting a line out is the one code action that is a whole thought rather than a
+    // character, so it gets a labelled button of its own.
     private func commentKey(_ token: String) -> some View {
         Button {
             codeSession.toggleComment()
@@ -348,9 +341,7 @@ struct EditorTray: View {
     }
 }
 
-/// Three bands with the middle one solid: stacked for a row, side by side for a
-/// column. Small enough to sit beside an action symbol and still say which axis
-/// the button belongs to.
+// Three bands with the middle one solid: stacked for a row, side by side for a column.
 struct TableBandGlyph: View {
     enum Axis {
         case row, column
