@@ -1,18 +1,13 @@
 import SwiftUI
 
-// Chrome colours.
+// Chrome colours: the board, the sheets, the controls over them. Neutral by
+// design, so the tiles are the only colour on screen and whichever palette is
+// chosen has nothing to fight.
+//
+// Not perfectly grey — a point or two of blue in the light values and the same
+// in the dark ones keeps a flat neutral from reading as dirty.
 enum Theme {
-    static let canvas = Color(hex: 0xF1EDE4)
-    static let card = Color(hex: 0xFFFFFF)
-    static let cardEdge = Color(hex: 0xEDE8DC)
-
-    static let surface = Color(hex: 0xE9E3D7)
-    static let border = Color(hex: 0xDED7C8)
-
-    static let ink = Color(hex: 0x17120E)
-    static let muted = Color(hex: 0x7C736A)
-    static let faint = Color(hex: 0xA79E93)
-
-    // Warm rather than black.
-    static let shadowTint = Color(hex: 0x2B1F12)
+    static let canvas = Color(hex: 0xF2F2F5)
+    static let surface = Color(hex: 0xE6E6EB)
+    static let ink = Color(hex: 0x121214)
 }

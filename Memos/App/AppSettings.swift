@@ -50,19 +50,21 @@ final class AppSettings {
     // keep their own colours, and panels over them stay light.
 
     var canvas: Color {
-        appearance == .dark ? Color(hex: 0x141210) : Theme.canvas
+        appearance == .dark ? Color(hex: 0x0E0E10) : Theme.canvas
     }
 
     var canvasInk: Color {
-        appearance == .dark ? Color(hex: 0xF5F0E6) : Theme.ink
+        appearance == .dark ? Color(hex: 0xF2F2F5) : Theme.ink
     }
 
+    // A shade lighter than the board, so an empty place reads as waiting rather
+    // than as a hole.
     var slotFill: Color {
-        appearance == .dark ? Color(hex: 0x1D1A16) : Color(hex: 0xF7F1E4)
+        appearance == .dark ? Color(hex: 0x18181C) : Color(hex: 0xFAFAFC)
     }
 
     var slotOutline: Color {
-        appearance == .dark ? Color(hex: 0x4A433A) : Color(hex: 0xC7B99D)
+        appearance == .dark ? Color(hex: 0x46464F) : Color(hex: 0xC4C4CD)
     }
 
     // MARK: Panels
@@ -71,15 +73,15 @@ final class AppSettings {
     // their own palette colours whatever the board is doing.
 
     var panel: Color {
-        appearance == .dark ? Color(hex: 0x1A1714) : Theme.canvas
+        appearance == .dark ? Color(hex: 0x131316) : Theme.canvas
     }
 
     var panelSurface: Color {
-        appearance == .dark ? Color(hex: 0x262119) : Theme.surface
+        appearance == .dark ? Color(hex: 0x202026) : Theme.surface
     }
 
     var panelInk: Color {
-        appearance == .dark ? Color(hex: 0xF5F0E6) : Theme.ink
+        appearance == .dark ? Color(hex: 0xF2F2F5) : Theme.ink
     }
 
     func color(_ index: Int) -> TileColor {
