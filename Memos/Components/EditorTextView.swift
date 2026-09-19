@@ -51,20 +51,46 @@ final class EditorTextView: UITextView {
         super.deleteBackward()
     }
 
+    // Scrolls the caret into view, and only if it is not already there.
+    //
+    // scrollRectToVisible was doing this on every keystroke, animated, against
+    // a layout that had not caught up with the character just typed — so each
+    // scroll was aimed at where the caret used to be, and the next one
+    // corrected it. That is the chopping. This moves the least it can, without
+    // animation, and does nothing at all when the caret is already showing.
     func revealCaret() {
-        guard let range = selectedTextRange else { return }
+        guard let range = selectedTextRange, let scroll = enclosingScrollView else { return }
+
         let caret = caretRect(for: range.end)
         guard caret.isFinite, !caret.isNull else { return }
 
-        let target = caret.insetBy(dx: 0, dy: -10)
+        let target = convert(caret.insetBy(dx: 0, dy: -8), to: scroll)
+        var visible = scroll.bounds.inset(by: scroll.adjustedContentInset)
+        visible.size.height -= Spacing.caretClearance
+        guard visible.height > 0 else { return }
+
+        var offset = scroll.contentOffset
+        if target.maxY > visible.maxY {
+            offset.y += target.maxY - visible.maxY
+        } else if target.minY < visible.minY {
+            offset.y -= visible.minY - target.minY
+        } else {
+            return
+        }
+
+        let inset = scroll.adjustedContentInset
+        let lowest = -inset.top
+        let highest = max(lowest, scroll.contentSize.height + inset.bottom - scroll.bounds.height)
+        scroll.contentOffset.y = min(max(offset.y, lowest), highest)
+    }
+
+    private var enclosingScrollView: UIScrollView? {
         var candidate: UIView? = superview
         while let view = candidate {
-            if let scroll = view as? UIScrollView {
-                scroll.scrollRectToVisible(convert(target, to: scroll), animated: true)
-                return
-            }
+            if let scroll = view as? UIScrollView { return scroll }
             candidate = view.superview
         }
+        return nil
     }
 
     // MARK: Markers

@@ -134,7 +134,14 @@ struct RichTextView: UIViewRepresentable {
             // Markers are painted on, so they are only right once the text they
             // sit beside has been laid out again.
             textView.setNeedsDisplay()
-            (textView as? EditorTextView)?.revealCaret()
+
+            // Next pass, not this one: publishing the text is what resizes the
+            // run, and chasing the caret before that lands aims at where it
+            // used to be. It costs nothing to wait — the reveal does nothing at
+            // all unless the caret has actually gone out of view.
+            DispatchQueue.main.async {
+                (textView as? EditorTextView)?.revealCaret()
+            }
         }
 
         // A new line after a title or heading carries on as body text.
