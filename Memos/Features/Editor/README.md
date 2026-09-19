@@ -71,3 +71,32 @@ the line break that ends a paragraph, so a level cannot leak onto the next line.
 List markers and the quote rule are drawn in `EditorTextView`, never inserted as
 text. The note then holds exactly what was typed: nothing to renumber, no marker
 anyone can half-delete, and clean previews and search.
+
+## Rearranging a widget
+
+Holding a widget puts the note into edit mode and the same hold carries it —
+one gesture, no lifting. `DeletableWidget` builds it from a `LongPressGesture`
+sequenced before a `DragGesture`.
+
+The press is the whole problem. Once it lands the touch belongs to the drag for
+the rest of that finger and the scroll view cannot have it back, so a press that
+is too easy to win turns scrolling into rearranging. It is long — half a second,
+failing on 8 points of travel — which is what separates a finger that stayed from
+a finger that was leaving.
+
+Read the phases carefully. `.first` is the press being attempted, from
+touch-down, so anything done there happens the moment a widget is touched;
+reaching `.second` is the press succeeding. The duration must also be a constant:
+varying it with edit mode rebuilds the gesture just as the press lands, which
+resets it and drops the finger that is still down.
+
+The move itself does not work on segments. `[TileSegment].blocks` flattens the
+note into one list of paragraphs and widgets, the widget moves inside that list,
+and `from(blocks:)` rebuilds the segments — so the runs of text either side join
+or split as a consequence rather than as bookkeeping. A widget can therefore land
+between any two lines of writing, not just beside another widget.
+
+`SegmentGeometry` holds where each segment sits and the text view behind each
+run: the frames find what is under the finger, the views answer which line of a
+run it is on. Both are needed because a run of text is many drop targets in one
+view.

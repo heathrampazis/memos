@@ -14,6 +14,10 @@ struct RichTextView: UIViewRepresentable {
     // A word was just finished, which is when a URL on its own line becomes a bookmark.
     var onWordCommitted: () -> Void
 
+    // Handed the text view once it exists, so a carried widget can ask which
+    // line of this run it is hovering over.
+    var onView: (EditorTextView) -> Void
+
     func makeUIView(context: Context) -> EditorTextView {
         let view = EditorTextView()
         let coordinator = context.coordinator
@@ -52,6 +56,7 @@ struct RichTextView: UIViewRepresentable {
             }
             return false
         }
+        onView(view)
         return view
     }
 

@@ -177,6 +177,19 @@ final class EditorTextView: UITextView {
         }
     }
 
+    // The line each paragraph starts on, in this view's own coordinates. A
+    // caret rect is enough to place a drop indicator, and far cheaper than
+    // asking for a full glyph pass. Null where the position cannot be resolved.
+    var paragraphCarets: [CGRect] {
+        let text = (attributedText?.string ?? "") as NSString
+        return paragraphRanges(in: text).map { range in
+            guard let spot = position(from: beginningOfDocument, offset: range.location)
+            else { return .null }
+            let rect = caretRect(for: spot)
+            return rect.isFinite && !rect.isNull ? rect : .null
+        }
+    }
+
     private func paragraphRanges(in string: NSString) -> [NSRange] {
         var ranges: [NSRange] = []
         var index = 0

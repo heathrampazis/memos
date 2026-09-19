@@ -23,6 +23,21 @@ struct TileEditorView: View {
     @State private var focusedPanel: UUID?
     @State private var codeSession = CodeSession()
     @State private var focusedTable: TableFocus?
+    @State private var geometry = SegmentGeometry()
+    @State private var carried: UUID?
+    @State private var carryOffset: CGSize = .zero
+    @State private var dropTarget: DropTarget?
+
+    // Frames are only comparable inside one space, and the note's own is the
+    // only one both a widget and the indicator above it share.
+    private static let noteSpace = "note"
+
+    // Where a carried widget would land: a slot in the note's flat block list,
+    // and the line to draw the indicator on.
+    private struct DropTarget: Equatable {
+        let slot: Int
+        let y: CGFloat
+    }
 
     private struct TableFocus: Equatable {
         let id: UUID
@@ -41,8 +56,11 @@ struct TileEditorView: View {
                 runs
                 tail
             }
+            .overlay(alignment: .topLeading) { dropIndicator }
+            .coordinateSpace(.named(Self.noteSpace))
             .padding(.horizontal, Spacing.screen)
         }
+        .scrollDisabled(carried != nil)
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .background(tileColor.fill)
@@ -179,53 +197,74 @@ struct TileEditorView: View {
 
     private var runs: some View {
         ForEach($segments) { $segment in
-            if segment.clip != nil {
-                AudioWidget(clip: $segment.clip.required(), color: tileColor)
-                    .modifier(deletable(segment.id))
-                    .padding(.vertical, 7)
-            } else if segment.panel != nil {
-                PanelWidget(panel: $segment.panel.required(), color: tileColor) { isFocused in
-                    trackPanelFocus(segment.id, isFocused)
-                }
-                .modifier(deletable(segment.id))
-                    .padding(.vertical, 7)
-            } else if segment.drawing != nil {
-                DrawingWidget(block: $segment.drawing.required(), color: tileColor)
-                    .modifier(deletable(segment.id))
-                    .padding(.vertical, 7)
-            } else if segment.photo != nil {
-                PhotoWidget(photo: $segment.photo.required(), color: tileColor)
-                    .modifier(deletable(segment.id))
-                    .padding(.vertical, 7)
-            } else if segment.link != nil {
-                LinkWidget(link: $segment.link.required(), color: tileColor)
-                    .modifier(deletable(segment.id))
-                    .padding(.vertical, 7)
-            } else if segment.table != nil {
-                TableWidget(
-                    block: $segment.table.required(),
-                    focus: tableFocus(for: segment.id),
-                    color: tileColor
-                )
-                .modifier(deletable(segment.id))
+            run(for: $segment, id: segment.id)
+                .modifier(measured(segment.id))
+                .zIndex(carried == segment.id ? 1 : 0)
+        }
+    }
+
+    @ViewBuilder
+    private func run(for segment: Binding<TileSegment>, id: UUID) -> some View {
+        if segment.wrappedValue.clip != nil {
+            AudioWidget(clip: segment.clip.required(), color: tileColor)
+                .modifier(deletable(id))
                 .padding(.vertical, 7)
-            } else if segment.code != nil {
-                CodeWidget(
-                    block: $segment.code.required(),
-                    color: tileColor,
-                    session: codeSession
-                )
-                .modifier(deletable(segment.id))
-                .padding(.vertical, 7)
-            } else {
-                RichTextView(
-                    segmentID: segment.id,
-                    text: $segment.text,
-                    controller: controller,
-                    onBackspaceAtStart: { mergeBack(segment.id) },
-                    onWordCommitted: detectLink
-                )
+        } else if segment.wrappedValue.panel != nil {
+            PanelWidget(panel: segment.panel.required(), color: tileColor) { isFocused in
+                trackPanelFocus(id, isFocused)
             }
+            .modifier(deletable(id))
+            .padding(.vertical, 7)
+        } else if segment.wrappedValue.drawing != nil {
+            DrawingWidget(block: segment.drawing.required(), color: tileColor)
+                .modifier(deletable(id))
+                .padding(.vertical, 7)
+        } else if segment.wrappedValue.photo != nil {
+            PhotoWidget(photo: segment.photo.required(), color: tileColor)
+                .modifier(deletable(id))
+                .padding(.vertical, 7)
+        } else if segment.wrappedValue.link != nil {
+            LinkWidget(link: segment.link.required(), color: tileColor)
+                .modifier(deletable(id))
+                .padding(.vertical, 7)
+        } else if segment.wrappedValue.table != nil {
+            TableWidget(
+                block: segment.table.required(),
+                focus: tableFocus(for: id),
+                color: tileColor
+            )
+            .modifier(deletable(id))
+            .padding(.vertical, 7)
+        } else if segment.wrappedValue.code != nil {
+            CodeWidget(
+                block: segment.code.required(),
+                color: tileColor,
+                session: codeSession
+            )
+            .modifier(deletable(id))
+            .padding(.vertical, 7)
+        } else {
+            RichTextView(
+                segmentID: id,
+                text: segment.text,
+                controller: controller,
+                onBackspaceAtStart: { mergeBack(id) },
+                onWordCommitted: detectLink,
+                onView: { geometry.register(id, view: $0) }
+            )
+        }
+    }
+
+    // A line in the gap the widget would fall into, so the placement is settled
+    // before the finger lifts rather than guessed at afterwards.
+    @ViewBuilder
+    private var dropIndicator: some View {
+        if carried != nil, let target = dropTarget {
+            Capsule()
+                .fill(tileColor.ink.opacity(0.32))
+                .frame(height: 3)
+                .offset(y: target.y - 1.5)
+                .allowsHitTesting(false)
         }
     }
 
@@ -234,12 +273,96 @@ struct TileEditorView: View {
     private func deletable(_ id: UUID) -> DeletableWidget {
         DeletableWidget(
             isEditing: isEditingWidgets,
+            isCarried: carried == id,
+            carryOffset: carried == id ? carryOffset : .zero,
             color: tileColor,
             seed: seed(for: id),
+            space: Self.noteSpace,
             onHold: holdWidgets,
             onDismiss: stopEditingWidgets,
-            onDelete: { confirmRemove(id) }
+            onDelete: { confirmRemove(id) },
+            onCarry: { carry(id, $0) },
+            onDrop: drop
         )
+    }
+
+    private func measured(_ id: UUID) -> MeasuredSegment {
+        MeasuredSegment(id: id, space: Self.noteSpace, geometry: geometry)
+    }
+
+    private func carry(_ id: UUID, _ drag: DragGesture.Value) {
+        // The drag starts the moment the hold lands, so without a threshold a
+        // hold-and-release would relocate the widget it only meant to select.
+        let lifted = abs(drag.translation.height) > 8 || abs(drag.translation.width) > 8
+        guard carried == id || lifted else { return }
+
+        if carried != id {
+            UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+            carried = id
+            stopInserting()
+        }
+        carryOffset = drag.translation
+        dropTarget = slot(under: drag.location, carrying: id)
+    }
+
+    private func drop() {
+        if let id = carried, let target = dropTarget { move(id, to: target.slot) }
+        carried = nil
+        carryOffset = .zero
+        dropTarget = nil
+    }
+
+    // Every gap the widget could fall into, scored by how close it is to the
+    // finger. Runs of writing are asked which of their lines the point is on, so
+    // a widget can land mid-paragraph and not only beside another widget.
+    private func slot(under point: CGPoint, carrying id: UUID) -> DropTarget? {
+        guard let home = segments.blocks.index(ofWidget: id) else { return nil }
+
+        var gaps: [DropTarget] = []
+        var position = 0
+
+        for segment in segments {
+            let frame = geometry.frames[segment.id] ?? .zero
+            guard segment.isText else {
+                gaps.append(DropTarget(slot: position, y: frame.minY))
+                position += 1
+                continue
+            }
+
+            let carets = geometry.view(for: segment.id)?.paragraphCarets ?? []
+            let lines = segment.text.paragraphs.count
+            for line in 0..<lines {
+                let caret = line < carets.count ? carets[line] : .null
+                let y = caret.isNull ? frame.minY : frame.minY + caret.minY
+                gaps.append(DropTarget(slot: position + line, y: y))
+            }
+            position += lines
+        }
+
+        if let last = segments.last, let frame = geometry.frames[last.id] {
+            gaps.append(DropTarget(slot: position, y: frame.maxY))
+        }
+
+        // Picking the nearest gap first, and only then rejecting the two that
+        // mean "where it already is", is what lets a drag be called off: near
+        // home there is no target, so the indicator goes and the drop is a no-op.
+        guard let nearest = gaps.min(by: { abs($0.y - point.y) < abs($1.y - point.y) }),
+              nearest.slot != home, nearest.slot != home + 1
+        else { return nil }
+        return nearest
+    }
+
+    // The move happens in the flat block list: pull the widget out, put it back,
+    // and let the rebuild decide which runs of text join or split.
+    private func move(_ id: UUID, to slot: Int) {
+        var blocks = segments.blocks
+        guard let from = blocks.index(ofWidget: id) else { return }
+
+        let widget = blocks.remove(at: from)
+        blocks.insert(widget, at: from < slot ? slot - 1 : slot)
+        segments = .from(blocks: blocks, reusing: segments)
+        geometry.keep(segments.map(\.id))
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     // Enough to give each widget its own wobble period so they do not swing in lockstep.
@@ -373,6 +496,7 @@ struct TileEditorView: View {
     }
 
     private func stopInserting() {
+        guard isInserting else { return }
         withAnimation(.easeOut(duration: 0.2)) { isInserting = false }
     }
 
@@ -527,14 +651,19 @@ struct TileEditorView: View {
     // MARK: Deleting widgets
 
     private func holdWidgets() {
+        guard !isEditingWidgets else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         // The keyboard would cover half the note and the format bar means
-        // nothing while widgets are being removed.
+        // nothing while widgets are being rearranged.
         controller.endEditing()
         withAnimation(.easeOut(duration: 0.2)) { isEditingWidgets = true }
     }
 
     private func stopEditingWidgets() {
         guard isEditingWidgets else { return }
+        carried = nil
+        carryOffset = .zero
+        dropTarget = nil
         withAnimation(.easeOut(duration: 0.2)) { isEditingWidgets = false }
     }
 
