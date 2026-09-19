@@ -36,6 +36,10 @@ enum Spacing {
     // it does in Notes.
     static let editorTailTap: CGFloat = 130
 
+    // Kept clear beneath the caret while typing, so a line never ends up under
+    // the floating (+).
+    static let caretClearance: CGFloat = addWidgetButton + 28
+
     static let trayRadius: CGFloat = 22
 
     // How far the tray's fill runs past the bottom of the screen, so its square lower edge and
