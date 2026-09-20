@@ -26,6 +26,21 @@ struct SettingsView: View {
                             }
                         }
                     }
+
+                    // App Review wants the privacy policy reachable from inside
+                    // the app, not only from the store listing.
+                    section("Legal") {
+                        VStack(spacing: 10) {
+                            linkRow("Privacy policy", Legal.privacyPolicy)
+                            linkRow("Terms of use", Legal.terms)
+                            linkRow("Support", Legal.support)
+                        }
+                    }
+
+                    Text(Legal.version)
+                        .font(Typography.sheetCaption)
+                        .foregroundStyle(settings.panelInk.opacity(0.45))
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .padding(Spacing.screen)
             }
@@ -57,6 +72,32 @@ struct SettingsView: View {
                 .foregroundStyle(settings.panelInk.opacity(0.55))
             content()
         }
+    }
+
+    private func linkRow(_ title: String, _ url: URL) -> some View {
+        Link(destination: url) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(Typography.rowTitle)
+                    .foregroundStyle(settings.panelInk)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(settings.panelInk.opacity(0.45))
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(settings.panelSurface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(settings.panelInk.opacity(0.16), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func paletteRow(_ kind: TilePaletteKind, isSelected: Bool) -> some View {

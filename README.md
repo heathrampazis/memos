@@ -54,3 +54,21 @@ with the note keeping only an id.
 `ModelContainerFactory` rebuilds the store from scratch in debug builds when a
 schema change stops it opening. That is deliberate while the shape is still
 moving, and wants replacing with a migration plan before anyone's notes matter.
+
+## Legal and the App Store
+
+`docs/` is the public site, served by GitHub Pages: the privacy policy App Review
+requires, and a support page for the Support URL the store listing asks for. Both
+addresses are also compiled into the app in `Legal.swift`, because guideline
+5.1.1(i) wants the privacy policy reachable from inside the app and not only from
+the listing. Change a URL in one place and the other must follow.
+
+`PrivacyInfo.xcprivacy` declares that the app tracks nobody, collects nothing,
+and touches one required-reason API: `UserDefaults`, for the appearance and
+palette settings, under reason `CA92.1`. Adding any of the other required-reason
+APIs — file timestamps, disk space, system boot time, active keyboards — means
+adding it there too, or the upload comes back as `ITMS-91053`.
+
+Export compliance is answered up front by `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption`,
+which is true only while the app has no cryptography of its own. HTTPS, which is
+all the bookmark fetch uses, is exempt.
