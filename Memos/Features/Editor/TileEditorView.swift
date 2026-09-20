@@ -75,15 +75,25 @@ struct TileEditorView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                CircleIconButton(systemImage: "chevron.left", tint: tileColor.ink) {
+                CircleIconButton(
+                    systemImage: "chevron.left",
+                    tint: tileColor.ink,
+                    size: Spacing.toolbarCircleButton
+                ) {
                     dismiss()
                 }
             }
+            .plainBackground()
             ToolbarItem(placement: .topBarTrailing) {
-                CircleIconButton(systemImage: "ellipsis", tint: tileColor.ink) {
+                CircleIconButton(
+                    systemImage: "ellipsis",
+                    tint: tileColor.ink,
+                    size: Spacing.toolbarCircleButton
+                ) {
                     isPickingColor = true
                 }
             }
+            .plainBackground()
         }
         .overlay(alignment: .bottomTrailing) {
             AddWidgetButton(color: tileColor, isOpen: isInserting) {
