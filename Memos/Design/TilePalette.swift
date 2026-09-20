@@ -41,11 +41,9 @@ struct TileColor: Identifiable, Hashable {
 }
 
 enum TilePalettes {
-    private static let names = ["Base", "Yellow", "Orange", "Rose", "Green", "Blue", "Violet"]
-
     static func colors(for kind: TilePaletteKind) -> [TileColor] {
-        fills(for: kind).enumerated().map { index, hex in
-            build(index, names[index], hex)
+        swatches(for: kind).enumerated().map { index, swatch in
+            build(index, swatch.name, swatch.fill)
         }
     }
 
@@ -54,15 +52,29 @@ enum TilePalettes {
         return all.indices.contains(index) ? all[index] : all[0]
     }
 
-    // Every fill stays light enough to carry ink text.
-    private static func fills(for kind: TilePaletteKind) -> [UInt32] {
+    // Names travel with their fills. Held apart, one list of names served all
+    // three palettes and a page of warm neutrals was still calling itself rose
+    // and violet. Every fill stays light enough to carry ink text.
+    private static func swatches(for kind: TilePaletteKind) -> [(name: String, fill: UInt32)] {
         switch kind {
         case .colour:
-            [0xFFFFFF, 0xFFD12E, 0xFF9F43, 0xFF8FA8, 0x46D89C, 0x4FBDF7, 0xB69EFF]
+            [
+                ("Base", 0xFFFFFF), ("Yellow", 0xFFD12E), ("Orange", 0xFF9F43),
+                ("Rose", 0xFF8FA8), ("Green", 0x46D89C), ("Blue", 0x4FBDF7),
+                ("Violet", 0xB69EFF),
+            ]
         case .paper:
-            [0xFFFDF7, 0xFAF5EA, 0xF3EBDB, 0xEBE1CD, 0xE3D7BE, 0xDACCAF, 0xD1C1A1]
+            [
+                ("Base", 0xFFFDF7), ("Ivory", 0xFAF5EA), ("Cream", 0xF3EBDB),
+                ("Manila", 0xEBE1CD), ("Oat", 0xE3D7BE), ("Sand", 0xDACCAF),
+                ("Kraft", 0xD1C1A1),
+            ]
         case .slate:
-            [0xFFFFFF, 0xF6F9FC, 0xEBF1F7, 0xDFE7F0, 0xD3DDE8, 0xC6D2E0, 0xB9C7D8]
+            [
+                ("Base", 0xFFFFFF), ("Mist", 0xF6F9FC), ("Frost", 0xEBF1F7),
+                ("Ash", 0xDFE7F0), ("Pewter", 0xD3DDE8), ("Steel", 0xC6D2E0),
+                ("Denim", 0xB9C7D8),
+            ]
         }
     }
 
