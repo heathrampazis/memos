@@ -29,6 +29,10 @@ enum Spacing {
 
     // The editing tray's top corners.
     static let circleButton: CGFloat = 44
+
+    // Inside a 44pt navigation bar a 44pt circle has no margin left, and from iOS 26 the
+    // system squeezes it to fit its own toolbar metrics. Bar buttons get their own size.
+    static let toolbarCircleButton: CGFloat = 36
     static let addWidgetButton: CGFloat = 54
     static let widgetOptionButton: CGFloat = 46
 
