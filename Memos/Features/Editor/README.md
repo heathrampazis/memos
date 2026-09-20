@@ -74,21 +74,24 @@ anyone can half-delete, and clean previews and search.
 
 ## Rearranging a widget
 
-Holding a widget puts the note into edit mode and the same hold carries it —
-one gesture, no lifting. `DeletableWidget` builds it from a `LongPressGesture`
-sequenced before a `DragGesture`.
+Holding a widget puts the note into edit mode and the same hold carries it — one
+finger, no lifting. `DeletableWidget` does that with two gestures rather than one
+composed of both, and the reason is worth keeping:
 
-The press is the whole problem. Once it lands the touch belongs to the drag for
-the rest of that finger and the scroll view cannot have it back, so a press that
-is too easy to win turns scrolling into rearranging. It is long — half a second,
-failing on 8 points of travel — which is what separates a finger that stayed from
-a finger that was leaving.
+- A bare `LongPressGesture`, high priority, decides that a hold happened. High
+  priority is what cancels the tap already in flight underneath, so the finger
+  lifting after a hold no longer opens the drawing editor. It is half a second
+  and fails on 8 points of travel, because once a hold is granted the page can no
+  longer scroll under it, so it must not be cheap to win.
+- A separate `DragGesture`, simultaneous, does the carrying. It is attached from
+  the start and ignores everything until the press arms it — a gesture switched
+  on with edit mode would be added to a finger already down and never see it, and
+  ignoring the touch until armed is what leaves a swipe free to scroll.
 
-Read the phases carefully. `.first` is the press being attempted, from
-touch-down, so anything done there happens the moment a widget is touched;
-reaching `.second` is the press succeeding. The duration must also be a constant:
-varying it with edit mode rebuilds the gesture just as the press lands, which
-resets it and drops the finger that is still down.
+Composing the two with `sequenced` is the obvious move and it fails twice over:
+the pair claims every touch the widget gets, so nothing inside one can be tapped,
+and `.first` reports the press being *attempted* from touch-down rather than
+landing, so the note wobbles the instant a widget is touched.
 
 The move itself does not work on segments. `[TileSegment].blocks` flattens the
 note into one list of paragraphs and widgets, the widget moves inside that list,

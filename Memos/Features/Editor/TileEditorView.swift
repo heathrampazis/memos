@@ -291,8 +291,9 @@ struct TileEditorView: View {
     }
 
     private func carry(_ id: UUID, _ drag: DragGesture.Value) {
-        // The drag starts the moment the hold lands, so without a threshold a
-        // hold-and-release would relocate the widget it only meant to select.
+        // The drag reports from the moment it is armed, and the press allows 8
+        // points of travel before then, so a hold that never really moved would
+        // otherwise relocate the widget it only meant to pick up.
         let lifted = abs(drag.translation.height) > 8 || abs(drag.translation.width) > 8
         guard carried == id || lifted else { return }
 
