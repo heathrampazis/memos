@@ -71,3 +71,35 @@ the line break that ends a paragraph, so a level cannot leak onto the next line.
 List markers and the quote rule are drawn in `EditorTextView`, never inserted as
 text. The note then holds exactly what was typed: nothing to renumber, no marker
 anyone can half-delete, and clean previews and search.
+
+## Rearranging a widget
+
+Holding a widget puts the note into edit mode and the same hold carries it — one
+finger, no lifting. `DeletableWidget` does that with two gestures rather than one
+composed of both, and the reason is worth keeping:
+
+- A bare `LongPressGesture`, high priority, decides that a hold happened. High
+  priority is what cancels the tap already in flight underneath, so the finger
+  lifting after a hold no longer opens the drawing editor. It is half a second
+  and fails on 8 points of travel, because once a hold is granted the page can no
+  longer scroll under it, so it must not be cheap to win.
+- A separate `DragGesture`, simultaneous, does the carrying. It is attached from
+  the start and ignores everything until the press arms it — a gesture switched
+  on with edit mode would be added to a finger already down and never see it, and
+  ignoring the touch until armed is what leaves a swipe free to scroll.
+
+Composing the two with `sequenced` is the obvious move and it fails twice over:
+the pair claims every touch the widget gets, so nothing inside one can be tapped,
+and `.first` reports the press being *attempted* from touch-down rather than
+landing, so the note wobbles the instant a widget is touched.
+
+The move itself does not work on segments. `[TileSegment].blocks` flattens the
+note into one list of paragraphs and widgets, the widget moves inside that list,
+and `from(blocks:)` rebuilds the segments — so the runs of text either side join
+or split as a consequence rather than as bookkeeping. A widget can therefore land
+between any two lines of writing, not just beside another widget.
+
+`SegmentGeometry` holds where each segment sits and the text view behind each
+run: the frames find what is under the finger, the views answer which line of a
+run it is on. Both are needed because a run of text is many drop targets in one
+view.
