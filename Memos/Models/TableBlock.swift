@@ -36,10 +36,17 @@ struct TableBlock: Equatable, Codable {
     // The header, for the board preview.
     var summary: String? {
         guard let header = cells.first else { return nil }
-        let titles = header
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-        return titles.isEmpty ? nil : titles.joined(separator: " \u{00B7} ")
+
+        var titles: [String] = []
+        for cell in header {
+            let title = cell.trimmingCharacters(in: .whitespaces)
+            if !title.isEmpty {
+                titles.append(title)
+            }
+        }
+
+        if titles.isEmpty { return nil }
+        return titles.joined(separator: " \u{00B7} ")
     }
 
     // MARK: Structure

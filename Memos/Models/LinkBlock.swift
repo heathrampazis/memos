@@ -17,10 +17,18 @@ struct LinkBlock: Equatable, Codable {
     // nothing.
     var host: String {
         guard let host = URL(string: url)?.host() else { return url }
-        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+
+        if host.hasPrefix("www.") {
+            return String(host.dropFirst(4))
+        }
+        return host
     }
 
     var displayTitle: String {
-        title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? host : title
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return host
+        }
+        return title
     }
 }

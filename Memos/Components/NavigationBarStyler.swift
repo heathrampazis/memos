@@ -51,13 +51,18 @@ struct NavigationBarStyler: UIViewControllerRepresentable {
         // screen the bar is reading from.
         private var owner: UIViewController? {
             var candidate: UIViewController? = self
+
             while let current = candidate {
-                if let navigation = current.navigationController,
-                   navigation.viewControllers.contains(where: { $0 === current }) {
-                    return current
+                if let navigation = current.navigationController {
+                    for controller in navigation.viewControllers {
+                        if controller === current {
+                            return current
+                        }
+                    }
                 }
                 candidate = current.parent
             }
+
             return nil
         }
     }

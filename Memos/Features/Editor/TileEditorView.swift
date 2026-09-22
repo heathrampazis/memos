@@ -199,7 +199,7 @@ struct TileEditorView: View {
             .onChange(of: tile.title) { _, new in
                 guard new.contains("\n") else { return }
                 tile.title = new.replacingOccurrences(of: "\n", with: "")
-                if let first = segments.first(where: { $0.isText }) {
+                if let first = firstTextSegment() {
                     controller.focus(first.id, at: 0)
                 }
             }
@@ -372,7 +372,11 @@ struct TileEditorView: View {
         let widget = blocks.remove(at: from)
         blocks.insert(widget, at: from < slot ? slot - 1 : slot)
         segments = .from(blocks: blocks, reusing: segments)
-        geometry.keep(segments.map(\.id))
+        var ids: [UUID] = []
+        for segment in segments {
+            ids.append(segment.id)
+        }
+        geometry.keep(ids)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
@@ -408,8 +412,28 @@ struct TileEditorView: View {
     }
 
     private var focusedPanelKind: PanelKind? {
-        guard let id = focusedPanel else { return nil }
-        return segments.first(where: { $0.id == id })?.panel?.kind
+        guard let id = focusedPanel, let index = indexOfSegment(id: id) else { return nil }
+        return segments[index].panel?.kind
+    }
+
+    // Where a segment sits in the note, or nil if it has since been removed.
+    private func indexOfSegment(id: UUID) -> Int? {
+        for index in 0..<segments.count {
+            if segments[index].id == id {
+                return index
+            }
+        }
+        return nil
+    }
+
+    // The first run of writing, which is where the caret goes when the title is committed.
+    private func firstTextSegment() -> TileSegment? {
+        for segment in segments {
+            if segment.isText {
+                return segment
+            }
+        }
+        return nil
     }
 
     private func trackPanelFocus(_ id: UUID, _ isFocused: Bool) {
@@ -423,7 +447,8 @@ struct TileEditorView: View {
     // A table that is still in the note.
     private var activeTable: TableFocus? {
         guard let focus = focusedTable,
-              segments.contains(where: { $0.id == focus.id && $0.table != nil })
+              let index = indexOfSegment(id: focus.id),
+              segments[index].table != nil
         else { return nil }
         return focus
     }
@@ -447,7 +472,7 @@ struct TileEditorView: View {
     // same row can be nudged twice without hunting for it.
     private func applyTable(_ action: TableAction) {
         guard let focus = activeTable,
-              let index = segments.firstIndex(where: { $0.id == focus.id }),
+              let index = indexOfSegment(id: focus.id),
               var table = segments[index].table
         else { return }
 
@@ -488,7 +513,7 @@ struct TileEditorView: View {
 
     private func setPanelKind(_ kind: PanelKind) {
         guard let id = focusedPanel,
-              let index = segments.firstIndex(where: { $0.id == id })
+              let index = indexOfSegment(id: id)
         else { return }
         segments[index].panel?.kind = kind
     }
@@ -685,8 +710,9 @@ struct TileEditorView: View {
 
     private var pendingWidgetName: String {
         guard let id = pendingWidget,
-              let segment = segments.first(where: { $0.id == id })
+              let index = indexOfSegment(id: id)
         else { return "widget" }
+        let segment = segments[index]
 
         if segment.clip != nil { return "voice memo" }
         if segment.drawing != nil { return "drawing" }

@@ -12,11 +12,19 @@ extension Array where Element == TileSegment {
     // Flattening is what makes moving a widget simple. Segment boundaries shift
     // as runs join and split, block positions do not.
     var blocks: [NoteBlock] {
-        flatMap { segment in
-            segment.isText
-                ? segment.text.paragraphs.map(NoteBlock.paragraph)
-                : [NoteBlock.widget(segment)]
+        var result: [NoteBlock] = []
+
+        for segment in self {
+            if segment.isText {
+                for paragraph in segment.text.paragraphs {
+                    result.append(.paragraph(paragraph))
+                }
+            } else {
+                result.append(.widget(segment))
+            }
         }
+
+        return result
     }
 
     // Neighbouring paragraphs collapse back into one run. Widgets keep the
@@ -25,13 +33,29 @@ extension Array where Element == TileSegment {
     // their text views are not torn down and rebuilt around the change.
     static func from(blocks: [NoteBlock], reusing old: [TileSegment] = []) -> [TileSegment] {
         var segments: [TileSegment] = []
-        var spare = old.filter(\.isText)
         var pending = NSMutableAttributedString()
+
+        var spare: [TileSegment] = []
+        for segment in old where segment.isText {
+            spare.append(segment)
+        }
 
         func closeRun() {
             let text = NSAttributedString(attributedString: pending)
-            let id = spare.firstIndex { $0.text == text }.map { spare.remove(at: $0).id }
-            segments.append(TileSegment(id: id ?? UUID(), text: text))
+
+            // A run whose text is unchanged is handed its old id back, so SwiftUI keeps
+            // the text view that is already on screen instead of building a new one. Each
+            // spare is claimed once, hence removing it as it is taken.
+            var reusedID: UUID? = nil
+            for index in 0..<spare.count {
+                if spare[index].text == text {
+                    reusedID = spare.remove(at: index).id
+                    break
+                }
+            }
+
+            let id = reusedID ?? UUID()
+            segments.append(TileSegment(id: id, text: text))
             pending = NSMutableAttributedString()
         }
 
@@ -89,9 +113,12 @@ extension NSAttributedString {
 
 extension Array where Element == NoteBlock {
     func index(ofWidget id: UUID) -> Int? {
-        firstIndex { block in
-            guard case .widget(let widget) = block else { return false }
-            return widget.id == id
+        for index in 0..<count {
+            guard case .widget(let widget) = self[index] else { continue }
+            if widget.id == id {
+                return index
+            }
         }
+        return nil
     }
 }
