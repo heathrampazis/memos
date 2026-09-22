@@ -68,10 +68,17 @@ enum CodeSyntax {
     private static func compiledRules(for language: CodeLanguage) -> [CompiledRule] {
         if let existing = compiled[language.rawValue] { return existing }
 
-        let built = rules(for: language).compactMap { rule -> CompiledRule? in
-            guard let expression = rule.expression else { return nil }
-            return CompiledRule(expression: expression, color: rule.color, group: rule.group)
+        var built: [CompiledRule] = []
+
+        for rule in rules(for: language) {
+            // A pattern that will not compile is dropped rather than allowed to stop the
+            // rest of the language highlighting.
+            guard let expression = rule.expression else { continue }
+            built.append(
+                CompiledRule(expression: expression, color: rule.color, group: rule.group)
+            )
         }
+
         compiled[language.rawValue] = built
         return built
     }

@@ -34,7 +34,11 @@ final class AudioPlayback: NSObject, AVAudioPlayerDelegate {
 
         ticker = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             guard let self, let player = self.player else { return }
-            self.progress = player.duration > 0 ? player.currentTime / player.duration : 0
+            if player.duration > 0 {
+                self.progress = player.currentTime / player.duration
+            } else {
+                self.progress = 0
+            }
             self.remaining = max(0, player.duration - player.currentTime)
         }
     }

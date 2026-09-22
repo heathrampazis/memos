@@ -51,7 +51,13 @@ enum WidgetChoice: Hashable, Identifiable {
     }
 
     static let blocks: [WidgetChoice] = [.photo, .drawing, .voice, .code, .table]
-    static let panels: [WidgetChoice] = PanelKind.allCases.map(WidgetChoice.panel)
+    static let panels: [WidgetChoice] = {
+        var choices: [WidgetChoice] = []
+        for kind in PanelKind.allCases {
+            choices.append(.panel(kind))
+        }
+        return choices
+    }()
 }
 
 // Everything that can go in a note, named.

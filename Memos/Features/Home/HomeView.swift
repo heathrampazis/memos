@@ -175,17 +175,40 @@ struct HomeView: View {
 
     // Real tiles first, then empty places up to the board's capacity.
     private var slots: [Slot] {
-        var slots = tiles.prefix(Tile.boardCapacity).enumerated().map { Slot.tile($1, $0) }
+        var slots: [Slot] = []
+
+        for index in 0..<tiles.count {
+            if index == Tile.boardCapacity { break }
+            slots.append(.tile(tiles[index], index))
+        }
+
         for index in slots.count..<Tile.boardCapacity {
             slots.append(.free(index))
         }
+
         return slots
     }
 
+    // The board is two slots wide.
     private var rows: [[Slot]] {
-        stride(from: 0, to: slots.count, by: 2).map { start in
-            Array(slots[start..<min(start + 2, slots.count)])
+        let slots = self.slots
+        var rows: [[Slot]] = []
+        var row: [Slot] = []
+
+        for slot in slots {
+            row.append(slot)
+            if row.count == 2 {
+                rows.append(row)
+                row = []
+            }
         }
+
+        // An odd number of slots leaves one on its own at the end.
+        if !row.isEmpty {
+            rows.append(row)
+        }
+
+        return rows
     }
 }
 

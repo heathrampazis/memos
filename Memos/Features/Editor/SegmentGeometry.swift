@@ -31,8 +31,18 @@ final class SegmentGeometry {
     // otherwise pile up for as long as the editor is open.
     func keep(_ ids: [UUID]) {
         let live = Set(ids)
-        frames = frames.filter { live.contains($0.key) }
-        runs = runs.filter { live.contains($0.key) }
+
+        var keptFrames: [UUID: CGRect] = [:]
+        for (id, frame) in frames where live.contains(id) {
+            keptFrames[id] = frame
+        }
+        frames = keptFrames
+
+        var keptRuns: [UUID: WeakTextView] = [:]
+        for (id, run) in runs where live.contains(id) {
+            keptRuns[id] = run
+        }
+        runs = keptRuns
     }
 }
 

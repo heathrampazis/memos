@@ -25,11 +25,20 @@ enum LinkMetadata {
 
     // The page's own image first, its icon second.
     private static func picture(from metadata: LPLinkMetadata) async -> Data? {
-        for provider in [metadata.imageProvider, metadata.iconProvider].compactMap({ $0 }) {
+        var providers: [NSItemProvider] = []
+        if let image = metadata.imageProvider {
+            providers.append(image)
+        }
+        if let icon = metadata.iconProvider {
+            providers.append(icon)
+        }
+
+        for provider in providers {
             if let image = await load(provider), let data = image.pngData() {
                 return data
             }
         }
+
         return nil
     }
 

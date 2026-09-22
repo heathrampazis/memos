@@ -10,10 +10,10 @@ struct Waveform: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 3) {
-            ForEach(Array(bars.enumerated()), id: \.offset) { index, value in
+            ForEach(0..<bars.count, id: \.self) { index in
                 Capsule()
                     .fill(fraction(index) < progress ? played : pending)
-                    .frame(width: 2.5, height: 4 + CGFloat(value) * 26)
+                    .frame(width: 2.5, height: 4 + CGFloat(bars[index]) * 26)
             }
         }
         .frame(height: 30)
@@ -27,6 +27,9 @@ struct Waveform: View {
     // An empty clip still draws a bar row, so the card keeps its shape before anything has been
     // recorded.
     private var bars: [Float] {
-        samples.isEmpty ? Array(repeating: 0.08, count: AudioSamples.barCount) : samples
+        if samples.isEmpty {
+            return Array(repeating: 0.08, count: AudioSamples.barCount)
+        }
+        return samples
     }
 }

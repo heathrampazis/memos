@@ -42,14 +42,25 @@ struct TileColor: Identifiable, Hashable {
 
 enum TilePalettes {
     static func colors(for kind: TilePaletteKind) -> [TileColor] {
-        swatches(for: kind).enumerated().map { index, swatch in
-            build(index, swatch.name, swatch.fill)
+        let swatches = swatches(for: kind)
+        var colors: [TileColor] = []
+
+        for index in 0..<swatches.count {
+            let swatch = swatches[index]
+            colors.append(build(index, swatch.name, swatch.fill))
         }
+
+        return colors
     }
 
     static func color(_ index: Int, in kind: TilePaletteKind) -> TileColor {
         let all = colors(for: kind)
-        return all.indices.contains(index) ? all[index] : all[0]
+
+        // A tile saved against a longer palette can point past the end of a shorter one.
+        if index < 0 || index >= all.count {
+            return all[0]
+        }
+        return all[index]
     }
 
     // Names travel with their fills. Held apart, one list of names served all

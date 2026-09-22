@@ -105,7 +105,11 @@ final class EditorTextView: UITextView {
 
         let text = attributedText ?? NSAttributedString()
         let paragraphs = paragraphRanges(in: text.string as NSString)
-        let attributes = paragraphs.map { markerAttributes(for: $0, in: text) }
+
+        var attributes: [[NSAttributedString.Key: Any]] = []
+        for paragraph in paragraphs {
+            attributes.append(markerAttributes(for: paragraph, in: text))
+        }
 
         drawQuoteRules(paragraphs, attributes)
         drawListMarkers(paragraphs, attributes)
@@ -165,15 +169,26 @@ final class EditorTextView: UITextView {
     ) {
         var number = 0
 
-        for (paragraph, attributes) in zip(paragraphs, attributes) {
-            guard let kind = RichText.list(in: attributes) else {
+        for index in 0..<paragraphs.count {
+            let paragraph = paragraphs[index]
+            let paragraphAttributes = attributes[index]
+
+            // A paragraph outside any list breaks the run of numbering.
+            guard let kind = RichText.list(in: paragraphAttributes) else {
                 number = 0
                 continue
             }
 
-            number = kind == .numbered ? number + 1 : 0
+            if kind == .numbered {
+                number += 1
+            } else {
+                number = 0
+            }
+
             guard let line = lineRect(at: paragraph.location) else { continue }
-            drawMarker(kind, number: number, checked: RichText.isChecked(in: attributes), on: line)
+
+            let checked = RichText.isChecked(in: paragraphAttributes)
+            drawMarker(kind, number: number, checked: checked, on: line)
         }
     }
 
@@ -182,12 +197,23 @@ final class EditorTextView: UITextView {
     // asking for a full glyph pass. Null where the position cannot be resolved.
     var paragraphCarets: [CGRect] {
         let text = (attributedText?.string ?? "") as NSString
-        return paragraphRanges(in: text).map { range in
-            guard let spot = position(from: beginningOfDocument, offset: range.location)
-            else { return .null }
+        var rects: [CGRect] = []
+
+        for range in paragraphRanges(in: text) {
+            guard let spot = position(from: beginningOfDocument, offset: range.location) else {
+                rects.append(.null)
+                continue
+            }
+
             let rect = caretRect(for: spot)
-            return rect.isFinite && !rect.isNull ? rect : .null
+            if rect.isFinite && !rect.isNull {
+                rects.append(rect)
+            } else {
+                rects.append(.null)
+            }
         }
+
+        return rects
     }
 
     private func paragraphRanges(in string: NSString) -> [NSRange] {
@@ -218,7 +244,12 @@ final class EditorTextView: UITextView {
         if paragraph.length > 0, paragraph.location < text.length {
             return text.attributes(at: paragraph.location, effectiveRange: nil)
         }
-        return selectedRange.location == paragraph.location ? typingAttributes : [:]
+        // An empty paragraph holds no attributes of its own, so what the caret is about
+        // to type stands in for them — but only for the paragraph the caret is actually in.
+        if selectedRange.location == paragraph.location {
+            return typingAttributes
+        }
+        return [:]
     }
 
     private func lineRect(at location: Int) -> CGRect? {

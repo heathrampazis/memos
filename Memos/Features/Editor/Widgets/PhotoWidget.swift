@@ -67,7 +67,12 @@ struct PhotoWidget: View {
             }).value else { return }
 
             image = PhotoStore.load(id)
-            photo.aspectRatio = size.height > 0 ? size.width / size.height : 1
+            // A zero height would divide by zero, so an unmeasured image stays square.
+            if size.height > 0 {
+                photo.aspectRatio = size.width / size.height
+            } else {
+                photo.aspectRatio = 1
+            }
             photo.isEmpty = false
             photo.revision += 1
             selection = nil

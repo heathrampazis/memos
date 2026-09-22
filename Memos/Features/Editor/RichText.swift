@@ -205,7 +205,10 @@ enum RichText {
     // around it.
     static func tint(level: TextLevel, ticked: Bool, ink: UIColor) -> UIColor {
         if ticked { return ink.withAlphaComponent(0.45) }
-        return level == .quote ? ink.withAlphaComponent(0.72) : ink
+        if level == .quote {
+            return ink.withAlphaComponent(0.72)
+        }
+        return ink
     }
 
     // Repaints every run to the given ink, leaving structure untouched.

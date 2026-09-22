@@ -20,9 +20,9 @@ struct TableWidget: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             VStack(spacing: 0) {
-                ForEach(Array(block.cells.enumerated()), id: \.offset) { rowIndex, row in
+                ForEach(0..<block.cells.count, id: \.self) { rowIndex in
                     HStack(spacing: 0) {
-                        ForEach(Array(row.enumerated()), id: \.offset) { columnIndex, _ in
+                        ForEach(0..<block.cells[rowIndex].count, id: \.self) { columnIndex in
                             cell(row: rowIndex, column: columnIndex)
                         }
                     }

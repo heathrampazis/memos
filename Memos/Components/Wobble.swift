@@ -16,15 +16,25 @@ struct Wobble: ViewModifier {
         Self.beat + Double(seed % 4) * 0.014
     }
 
+    // Which way the tile is leaning at this moment. A tile that is not wobbling sits straight.
+    private var angle: Double {
+        if !active { return 0 }
+        if swung { return Self.swing }
+        return -Self.swing
+    }
+
+    private var motion: Animation {
+        if active {
+            return .easeInOut(duration: period).repeatForever(autoreverses: true)
+        }
+        // Coming to rest, rather than stopping mid-swing.
+        return .easeOut(duration: 0.18)
+    }
+
     func body(content: Content) -> some View {
         content
-            .rotationEffect(.degrees(active ? (swung ? Self.swing : -Self.swing) : 0))
-            .animation(
-                active
-                    ? .easeInOut(duration: period).repeatForever(autoreverses: true)
-                    : .easeOut(duration: 0.18),
-                value: swung
-            )
+            .rotationEffect(.degrees(angle))
+            .animation(motion, value: swung)
             .onChange(of: active) { _, isActive in
                 swung = isActive
             }

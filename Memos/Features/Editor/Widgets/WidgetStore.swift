@@ -12,6 +12,8 @@ enum WidgetStore {
     }
 
     static func deleteAll(in segments: [TileSegment]) {
-        segments.forEach(delete)
+        for segment in segments {
+            delete(segment)
+        }
     }
 }

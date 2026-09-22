@@ -15,31 +15,30 @@ enum TileCodec {
     }
 
     static func encode(_ segments: [TileSegment]) -> Data {
-        let entries = segments.map { segment in
+        var entries: [Entry] = []
+
+        for segment in segments {
             if let clip = segment.clip {
-                return Entry(clip: clip)
+                entries.append(Entry(clip: clip))
+            } else if let panel = segment.panel {
+                entries.append(Entry(panel: panel))
+            } else if let drawing = segment.drawing {
+                entries.append(Entry(drawing: drawing))
+            } else if let photo = segment.photo {
+                entries.append(Entry(photo: photo))
+            } else if let code = segment.code {
+                entries.append(Entry(code: code))
+            } else if let table = segment.table {
+                entries.append(Entry(table: table))
+            } else if let link = segment.link {
+                entries.append(Entry(link: link))
+            } else {
+                entries.append(Entry(text: RichText.archive(segment.text)))
             }
-            if let panel = segment.panel {
-                return Entry(panel: panel)
-            }
-            if let drawing = segment.drawing {
-                return Entry(drawing: drawing)
-            }
-            if let photo = segment.photo {
-                return Entry(photo: photo)
-            }
-            if let code = segment.code {
-                return Entry(code: code)
-            }
-            if let table = segment.table {
-                return Entry(table: table)
-            }
-            if let link = segment.link {
-                return Entry(link: link)
-            }
-            return Entry(text: RichText.archive(segment.text))
         }
-        return (try? JSONEncoder().encode(entries)) ?? Data()
+
+        guard let data = try? JSONEncoder().encode(entries) else { return Data() }
+        return data
     }
 
     static func decode(_ data: Data) -> [TileSegment] {
@@ -49,53 +48,102 @@ enum TileCodec {
             return [TileSegment(text: RichText.restore(data))]
         }
 
-        let segments = entries.map { entry -> TileSegment in
-            if let clip = entry.clip { return TileSegment(clip: clip) }
-            if let panel = entry.panel { return TileSegment(panel: panel) }
-            if let drawing = entry.drawing { return TileSegment(drawing: drawing) }
-            if let photo = entry.photo { return TileSegment(photo: photo) }
-            if let code = entry.code { return TileSegment(code: code) }
-            if let table = entry.table { return TileSegment(table: table) }
-            if let link = entry.link { return TileSegment(link: link) }
-            return TileSegment(text: RichText.restore(entry.text ?? Data()))
+        var segments: [TileSegment] = []
+
+        for entry in entries {
+            if let clip = entry.clip {
+                segments.append(TileSegment(clip: clip))
+            } else if let panel = entry.panel {
+                segments.append(TileSegment(panel: panel))
+            } else if let drawing = entry.drawing {
+                segments.append(TileSegment(drawing: drawing))
+            } else if let photo = entry.photo {
+                segments.append(TileSegment(photo: photo))
+            } else if let code = entry.code {
+                segments.append(TileSegment(code: code))
+            } else if let table = entry.table {
+                segments.append(TileSegment(table: table))
+            } else if let link = entry.link {
+                segments.append(TileSegment(link: link))
+            } else {
+                let archived = entry.text ?? Data()
+                segments.append(TileSegment(text: RichText.restore(archived)))
+            }
         }
-        return segments.isEmpty ? [TileSegment()] : segments
+
+        // A body that decoded to nothing still needs one empty run to type into.
+        if segments.isEmpty {
+            return [TileSegment()]
+        }
+        return segments
     }
 
     // The board preview and, later, search read this rather than decoding the body.
     static func plainText(_ segments: [TileSegment]) -> String {
-        segments
-            .compactMap { segment -> String? in
-                if let clip = segment.clip {
-                    return clip.isEmpty ? nil : "\u{266A} " + clip.displayName
-                }
-                if let panel = segment.panel {
-                    return panel.text.isEmpty ? nil : panel.text
-                }
-                if let drawing = segment.drawing {
-                    return drawing.isEmpty ? nil : "\u{270E} Drawing"
-                }
-                if let photo = segment.photo {
-                    return photo.isEmpty ? nil : "\u{25A3} Photo"
-                }
-                if let link = segment.link {
-                    return link.isEmpty ? nil : "\u{2197} " + link.displayTitle
-                }
-                if let table = segment.table {
-                    return table.summary.map { "\u{25A6} " + $0 }
-                }
-                if let code = segment.code {
-                    // The first line of a snippet says more than the word
-                    // "code" ever would.
-                    guard !code.isEmpty else { return nil }
-                    let first = code.code
-                        .split(separator: "\n")
-                        .first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-                    return first.map { "\u{2039}\u{203A} " + $0.trimmingCharacters(in: .whitespaces) }
-                }
-                let text = segment.text.string.trimmingCharacters(in: .whitespacesAndNewlines)
-                return text.isEmpty ? nil : text
+        var lines: [String] = []
+
+        for segment in segments {
+            if let line = previewLine(for: segment) {
+                lines.append(line)
             }
-            .joined(separator: "\n")
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    // One line standing in for one segment, or nil when the segment is empty and
+    // should not take up a line of the preview at all.
+    private static func previewLine(for segment: TileSegment) -> String? {
+        if let clip = segment.clip {
+            if clip.isEmpty { return nil }
+            return "\u{266A} " + clip.displayName
+        }
+
+        if let panel = segment.panel {
+            if panel.text.isEmpty { return nil }
+            return panel.text
+        }
+
+        if let drawing = segment.drawing {
+            if drawing.isEmpty { return nil }
+            return "\u{270E} Drawing"
+        }
+
+        if let photo = segment.photo {
+            if photo.isEmpty { return nil }
+            return "\u{25A3} Photo"
+        }
+
+        if let link = segment.link {
+            if link.isEmpty { return nil }
+            return "\u{2197} " + link.displayTitle
+        }
+
+        if let table = segment.table {
+            guard let summary = table.summary else { return nil }
+            return "\u{25A6} " + summary
+        }
+
+        if let code = segment.code {
+            return codePreviewLine(for: code)
+        }
+
+        let text = segment.text.string.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return nil }
+        return text
+    }
+
+    // The first line of a snippet says more than the word "code" ever would.
+    private static func codePreviewLine(for code: CodeBlock) -> String? {
+        guard !code.isEmpty else { return nil }
+
+        for line in code.code.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty {
+                return "\u{2039}\u{203A} " + trimmed
+            }
+        }
+
+        return nil
     }
 }

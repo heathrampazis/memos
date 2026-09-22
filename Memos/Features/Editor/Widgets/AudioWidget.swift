@@ -103,13 +103,19 @@ struct AudioWidget: View {
 
     private var glyph: String {
         if clip.isEmpty { return "mic.fill" }
-        return playback.isPlaying ? "pause.fill" : "play.fill"
+        if playback.isPlaying {
+            return "pause.fill"
+        }
+        return "play.fill"
     }
 
     private var actionLabel: String {
         if recorder.isRecording { return "Stop recording" }
         if clip.isEmpty { return "Record" }
-        return playback.isPlaying ? "Pause" : "Play"
+        if playback.isPlaying {
+            return "Pause"
+        }
+        return "Play"
     }
 
     private var time: TimeInterval {
