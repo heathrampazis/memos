@@ -234,6 +234,17 @@ final class EditorTextView: UITextView {
         return rect
     }
 
+    // A paragraph without the break that ends it.
+    private func contentRange(of paragraph: NSRange, in string: NSString) -> NSRange {
+        guard paragraph.length > 0 else { return paragraph }
+
+        let last = NSMaxRange(paragraph) - 1
+        let character = string.substring(with: NSRange(location: last, length: 1))
+        guard character == "\n" || character == "\r" else { return paragraph }
+
+        return NSRange(location: paragraph.location, length: paragraph.length - 1)
+    }
+
     private func drawMarker(_ kind: TextListKind, number: Int, checked: Bool, on line: CGRect) {
         let centerY = line.minY + min(line.height, 24) / 2
         let column = CGRect(
@@ -315,11 +326,18 @@ final class EditorTextView: UITextView {
         let checked = !RichText.isChecked(in: attributes)
         let selection = selectedRange
 
+        // The tick belongs to the words, not to the break that ends them. A break carrying
+        // checked is inherited by the empty paragraph Return opens next, which is how ticking
+        // one item used to hand the following item a tick it never earned.
+        let content = contentRange(of: paragraph, in: string)
+
         // Collected first: rewriting attributes while enumerating the same
         // storage is asking for trouble.
         var runs: [(NSRange, [NSAttributedString.Key: Any])] = []
-        textStorage.enumerateAttributes(in: paragraph, options: []) { attributes, range, _ in
-            runs.append((range, attributes))
+        if content.length > 0 {
+            textStorage.enumerateAttributes(in: content, options: []) { attributes, range, _ in
+                runs.append((range, attributes))
+            }
         }
 
         textStorage.beginEditing()
@@ -335,6 +353,17 @@ final class EditorTextView: UITextView {
                     ink: inkColor
                 ),
                 range: range
+            )
+        }
+        // The break stays in the list so the next paragraph still reads as an item, and stays
+        // unticked so that item starts out still to do.
+        if content.length < paragraph.length {
+            textStorage.setAttributes(
+                RichText.attributes(level: .body, list: .checklist, ink: inkColor),
+                range: NSRange(
+                    location: NSMaxRange(content),
+                    length: paragraph.length - content.length
+                )
             )
         }
         textStorage.endEditing()

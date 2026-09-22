@@ -110,11 +110,25 @@ final class RichTextController {
         return NSRange(location: paragraph.location, length: paragraph.length - 1)
     }
 
-    // Leaves a paragraph's closing break carrying nothing but body.
-    private func neutralise(_ paragraph: NSRange, content: NSRange, in text: NSMutableAttributedString) {
+    // Leaves a paragraph's closing break carrying body, plus the list it belongs to.
+    //
+    // The level is dropped on purpose: a title or a quote that kept its style on the break
+    // dragged that style along behind the caret when you left the paragraph.
+    //
+    // The list has to stay. A paragraph with nothing typed into it yet owns no characters
+    // except its break, so the break is the only place its attributes can live — and that
+    // empty paragraph is exactly the new item Return has just opened. Stripping the list here
+    // is what left a fresh line indented but with no marker beside it.
+    private func neutralise(
+        _ paragraph: NSRange,
+        content: NSRange,
+        list: TextListKind?,
+        in text: NSMutableAttributedString
+    ) {
         guard content.length < paragraph.length else { return }
         text.setAttributes(
-            RichText.attributes(level: .body, ink: inkColor),
+            // Never carried across ticked: Return on a done item opens an item still to do.
+            RichText.attributes(level: .body, list: list, ink: inkColor),
             range: NSRange(location: NSMaxRange(content), length: paragraph.length - content.length)
         )
     }
@@ -173,7 +187,7 @@ final class RichTextController {
                         )
                     }
                 }
-                neutralise(paragraph, content: content, in: text)
+                neutralise(paragraph, content: content, list: keptList, in: text)
                 replace(textView, with: text)
             }
             level = newLevel
@@ -275,7 +289,7 @@ final class RichTextController {
                 )
             }
         }
-        neutralise(paragraph, content: content, in: text)
+        neutralise(paragraph, content: content, list: kind, in: text)
     }
 
     func toggleBold() { setInline(bold: !isBold, italic: isItalic, underlined: isUnderlined) }
