@@ -6,6 +6,11 @@ import SwiftData
 struct TileEditorView: View {
     @Bindable var tile: Tile
 
+    // Called the moment a delete is confirmed, while this editor still covers the board.
+    // The board uses it to drop the tile straight away; the model itself is not deleted
+    // until onDisappear, once nothing is reading it any more.
+    var onDeleting: () -> Void = {}
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(AppSettings.self) private var settings
@@ -80,7 +85,7 @@ struct TileEditorView: View {
                     tint: tileColor.ink,
                     size: Spacing.toolbarCircleButton
                 ) {
-                    dismiss()
+                    close()
                 }
             }
             .plainBackground()
@@ -126,7 +131,8 @@ struct TileEditorView: View {
             TileColorPicker(selection: $tile.colorIndex) {
                 isDeleting = true
                 isPickingColor = false
-                dismiss()
+                onDeleting()
+                close()
             }
         }
         .confirmationDialog(
@@ -747,6 +753,14 @@ struct TileEditorView: View {
             guard !Task.isCancelled else { return }
             commit()
         }
+    }
+
+    // Every way out of the editor that this view controls puts the keyboard away first.
+    // Left up, it outlives the pop and sits over the board while it closes.
+    private func close() {
+        titleFocused = false
+        controller.endEditing()
+        dismiss()
     }
 
     private func commit() {

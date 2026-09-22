@@ -14,6 +14,11 @@ struct HomeView: View {
     @State private var isConfirmingDelete = false
     @State private var isShowingSettings = false
 
+    // A tile whose delete has been confirmed but whose model is still being torn down.
+    // It is kept off the board for that window so the editor never pops back onto a board
+    // still showing the tile the user just deleted.
+    @State private var hiddenTileID: PersistentIdentifier?
+
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
@@ -23,12 +28,18 @@ struct HomeView: View {
             .padding(.horizontal, Spacing.screen)
             .padding(.bottom, Spacing.homeBottomInset)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // There is nothing to type into on the board, so a keyboard on its way out from
+            // the editor must not be allowed to inset it — that inset is what squashed the
+            // tiles for the moment the keyboard took to go.
+            .ignoresSafeArea(.keyboard, edges: .bottom)
             .background(settings.canvas)
             .contentShape(Rectangle())
             .onTapGesture { stopArranging() }
             .navigationDestination(isPresented: $isEditorOpen) {
                 if let openTile {
-                    TileEditorView(tile: openTile)
+                    TileEditorView(tile: openTile) {
+                        hide(openTile)
+                    }
                 }
             }
             .onChange(of: isEditorOpen) { _, presented in
@@ -123,8 +134,17 @@ struct HomeView: View {
     // MARK: Actions
 
     private func open(_ tile: Tile) {
+        // Opening anything means no delete is in flight, so nothing should still be hidden.
+        hiddenTileID = nil
         openTile = tile
         isEditorOpen = true
+    }
+
+    // Deliberately not animated: the editor is still covering the board while this runs, so
+    // the tile should simply be absent when the board comes back rather than animating out
+    // in front of the user.
+    private func hide(_ tile: Tile) {
+        hiddenTileID = tile.persistentModelID
     }
 
     private func addTile() {
@@ -177,9 +197,10 @@ struct HomeView: View {
     private var slots: [Slot] {
         var slots: [Slot] = []
 
-        for index in 0..<tiles.count {
-            if index == Tile.boardCapacity { break }
-            slots.append(.tile(tiles[index], index))
+        for tile in tiles {
+            if slots.count == Tile.boardCapacity { break }
+            if tile.persistentModelID == hiddenTileID { continue }
+            slots.append(.tile(tile, slots.count))
         }
 
         for index in slots.count..<Tile.boardCapacity {
