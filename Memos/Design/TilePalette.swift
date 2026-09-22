@@ -1,13 +1,14 @@
 import SwiftUI
 
 enum TilePaletteKind: String, CaseIterable, Identifiable, Codable {
-    case colour, paper, slate
+    case colour, soft, paper, slate
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
         case .colour: "Colour"
+        case .soft: "Soft"
         case .paper: "Paper"
         case .slate: "Slate"
         }
@@ -16,6 +17,7 @@ enum TilePaletteKind: String, CaseIterable, Identifiable, Codable {
     var caption: String {
         switch self {
         case .colour: "Highlighter brights"
+        case .soft: "Muted pastels"
         case .paper: "Warm neutrals"
         case .slate: "Cool greys"
         }
@@ -73,6 +75,14 @@ enum TilePalettes {
                 ("Base", 0xFFFFFF), ("Yellow", 0xFFD12E), ("Orange", 0xFF9F43),
                 ("Rose", 0xFF8FA8), ("Green", 0x46D89C), ("Blue", 0x4FBDF7),
                 ("Violet", 0xB69EFF),
+            ]
+        case .soft:
+            // The same hue wheel as Colour, with the saturation pulled right down, for a
+            // board that colour-codes without shouting.
+            [
+                ("Base", 0xFFFFFF), ("Butter", 0xFBEFC0), ("Peach", 0xFBDDC6),
+                ("Blush", 0xF7D5DA), ("Sage", 0xD9E7D3), ("Sky", 0xD3E5F3),
+                ("Lilac", 0xDFD9F1),
             ]
         case .paper:
             [
