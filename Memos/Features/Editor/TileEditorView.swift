@@ -6,6 +6,11 @@ import SwiftData
 struct TileEditorView: View {
     @Bindable var tile: Tile
 
+    // Called the moment a delete is confirmed, while this editor still covers the board.
+    // The board uses it to drop the tile straight away; the model itself is not deleted
+    // until onDisappear, once nothing is reading it any more.
+    var onDeleting: () -> Void = {}
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Environment(AppSettings.self) private var settings
@@ -80,7 +85,7 @@ struct TileEditorView: View {
                     tint: tileColor.ink,
                     size: Spacing.toolbarCircleButton
                 ) {
-                    dismiss()
+                    close()
                 }
             }
             .plainBackground()
@@ -90,6 +95,7 @@ struct TileEditorView: View {
                     tint: tileColor.ink,
                     size: Spacing.toolbarCircleButton
                 ) {
+                    dismissKeyboard()
                     isPickingColor = true
                 }
             }
@@ -126,7 +132,8 @@ struct TileEditorView: View {
             TileColorPicker(selection: $tile.colorIndex) {
                 isDeleting = true
                 isPickingColor = false
-                dismiss()
+                onDeleting()
+                close()
             }
         }
         .confirmationDialog(
@@ -747,6 +754,22 @@ struct TileEditorView: View {
             guard !Task.isCancelled else { return }
             commit()
         }
+    }
+
+    // A sheet does not take the keyboard away, it only covers it: the text view keeps first
+    // responder underneath and UIKit hands its keyboard straight back when the sheet closes.
+    // That is why the keyboard reappeared exactly as the editor popped. Resigning before the
+    // sheet opens leaves nothing to restore.
+    private func dismissKeyboard() {
+        titleFocused = false
+        controller.endEditing()
+    }
+
+    // Every way out of the editor that this view controls puts the keyboard away first.
+    // Left up, it outlives the pop and sits over the board while it closes.
+    private func close() {
+        dismissKeyboard()
+        dismiss()
     }
 
     private func commit() {
