@@ -8,41 +8,37 @@ struct SettingsView: View {
         @Bindable var settings = settings
 
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    section("Appearance") {
-                        Picker("Appearance", selection: $settings.appearance) {
-                            ForEach(Appearance.allCases) { option in
-                                Text(option.label).tag(option)
+            // The footer belongs at the foot of the screen, not trailing whatever the last
+            // section happens to be. Giving the content at least the height of the scroll
+            // view lets a spacer push it down when the settings do not fill the screen, while
+            // still letting the whole thing scroll once they do.
+            GeometryReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        section("Appearance") {
+                            Picker("Appearance", selection: $settings.appearance) {
+                                ForEach(Appearance.allCases) { option in
+                                    Text(option.label).tag(option)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                        }
+
+                        section("Tile palette") {
+                            VStack(spacing: 10) {
+                                ForEach(TilePaletteKind.allCases) { kind in
+                                    paletteRow(kind, isSelected: settings.palette == kind)
+                                }
                             }
                         }
-                        .pickerStyle(.segmented)
-                    }
 
-                    section("Tile palette") {
-                        VStack(spacing: 10) {
-                            ForEach(TilePaletteKind.allCases) { kind in
-                                paletteRow(kind, isSelected: settings.palette == kind)
-                            }
-                        }
-                    }
+                        Spacer(minLength: 0)
 
-                    // App Review wants the privacy policy reachable from inside
-                    // the app, not only from the store listing.
-                    section("Legal") {
-                        VStack(spacing: 10) {
-                            linkRow("Privacy policy", Legal.privacyPolicy)
-                            linkRow("Terms of use", Legal.terms)
-                            linkRow("Support", Legal.support)
-                        }
+                        footer
                     }
-
-                    Text(Legal.version)
-                        .font(Typography.sheetCaption)
-                        .foregroundStyle(settings.panelInk.opacity(0.45))
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(Spacing.screen)
+                    .frame(minHeight: proxy.size.height, alignment: .top)
                 }
-                .padding(Spacing.screen)
             }
             .background(settings.panel)
             .toolbarBackground(settings.panel, for: .navigationBar)
@@ -74,28 +70,39 @@ struct SettingsView: View {
         }
     }
 
-    private func linkRow(_ title: String, _ url: URL) -> some View {
-        Link(destination: url) {
-            HStack(spacing: 12) {
-                Text(title)
-                    .font(Typography.rowTitle)
-                    .foregroundStyle(settings.panelInk)
+    // App Review wants the privacy policy reachable from inside the app rather than only from
+    // the store listing. It is — as a footnote, because nobody opens a notes app to read one.
+    private var footer: some View {
+        VStack(spacing: 8) {
+            Text(Legal.version)
+                .font(Typography.sheetCaption)
+                .foregroundStyle(settings.panelInk.opacity(0.45))
 
-                Spacer(minLength: 0)
-
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(settings.panelInk.opacity(0.45))
+            HStack(spacing: 8) {
+                footnoteLink("Privacy", Legal.privacyPolicy)
+                dot
+                footnoteLink("Terms", Legal.terms)
+                dot
+                footnoteLink("Support", Legal.support)
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(settings.panelSurface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(settings.panelInk.opacity(0.16), lineWidth: 1)
-            )
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var dot: some View {
+        Text("·")
+            .font(Typography.sheetCaption)
+            .foregroundStyle(settings.panelInk.opacity(0.25))
+    }
+
+    // Quiet enough to stay out of the way, padded so it is still comfortably tappable.
+    private func footnoteLink(_ title: String, _ url: URL) -> some View {
+        Link(destination: url) {
+            Text(title)
+                .font(Typography.sheetCaption)
+                .foregroundStyle(settings.panelInk.opacity(0.6))
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
