@@ -95,6 +95,7 @@ struct TileEditorView: View {
                     tint: tileColor.ink,
                     size: Spacing.toolbarCircleButton
                 ) {
+                    dismissKeyboard()
                     isPickingColor = true
                 }
             }
@@ -755,11 +756,19 @@ struct TileEditorView: View {
         }
     }
 
+    // A sheet does not take the keyboard away, it only covers it: the text view keeps first
+    // responder underneath and UIKit hands its keyboard straight back when the sheet closes.
+    // That is why the keyboard reappeared exactly as the editor popped. Resigning before the
+    // sheet opens leaves nothing to restore.
+    private func dismissKeyboard() {
+        titleFocused = false
+        controller.endEditing()
+    }
+
     // Every way out of the editor that this view controls puts the keyboard away first.
     // Left up, it outlives the pop and sits over the board while it closes.
     private func close() {
-        titleFocused = false
-        controller.endEditing()
+        dismissKeyboard()
         dismiss()
     }
 
